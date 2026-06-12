@@ -1,6 +1,7 @@
 use anyhow::Result;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use tauri::{AppHandle, Manager};
+use std::path::Path;
 
 pub async fn init(app: &AppHandle) -> Result<SqlitePool> {
     let app_dir = app.path().app_data_dir().expect("app data dir");
@@ -13,7 +14,12 @@ pub async fn init(app: &AppHandle) -> Result<SqlitePool> {
         .connect(&db_url)
         .await?;
 
-    sqlx::migrate!("./migrations").run(&pool).await?;
+    // Run migrations manually
+    let migration_path = Path::new("migrations/20240612000001_init.sql");
+    if migration_path.exists() {
+        let sql = std::fs::read_to_string(migration_path)?;
+        sqlx::query(&sql).execute(&pool).await?;
+    }
 
     app.manage(pool.clone());
     Ok(pool)
