@@ -1,0 +1,7 @@
+
+ALTER TABLE students 
+ADD COLUMN IF NOT EXISTS parent_name text DEFAULT '',
+ADD COLUMN IF NOT EXISTS parent_phone text DEFAULT '',
+ADD COLUMN IF NOT EXISTS address text DEFAULT '',
+ADD COLUMN IF NOT EXISTS notes text DEFAULT '',
+ADD COLUMN IF NOT EXISTS photo_url text DEFAULT '';
