@@ -1,6 +1,16 @@
-// Local API client - replaces Supabase entirely
+// Tauri-aware Local API client - uses Tauri invoke when running in Tauri, fetch otherwise
 
 const API = '/api';
+
+// Detect Tauri runtime
+const isTauri = typeof window !== 'undefined' && typeof (window as any).__TAURI_INTERNALS__ !== 'undefined';
+
+let invoke: (cmd: string, args?: any) => Promise<any>;
+if (isTauri) {
+  // Dynamic import — only resolved at runtime inside Tauri
+  invoke = (cmd, args) =>
+    import('@tauri-apps/api/core').then(m => m.invoke(cmd, args || {}));
+}
 
 function headers() {
   return { 'Content-Type': 'application/json' };
@@ -73,36 +83,56 @@ class QueryBuilder {
   async then(resolve: (val: any) => any, reject?: (err: any) => any) {
     try {
       const tn = tableName(this.table);
-      const params = new URLSearchParams();
-      if (this.orderCol)
-        params.set('order', `${this.orderCol}.${this.orderAsc ? 'asc' : 'desc'}`);
-      if (this.limitVal) params.set('limit', String(this.limitVal));
-      // First eq filter (status) goes as query param for server-side filtering
-      const statusFilter = this.filters.find(f => f.col === 'status');
-      if (statusFilter) params.set('status', statusFilter.val);
+      let sql = `SELECT * FROM "${tn}"`;
+      const where: string[] = [];
+      const params: any[] = [];
 
-      const qs = params.toString();
-      const url = `${API}/${tn}${qs ? '?' + qs : ''}`;
-      const res = await fetch(url, { headers: headers() });
+      for (const f of this.filters) {
+        where.push(`"${f.col}" = ?`);
+        params.push(f.val);
+      }
+      if (where.length) sql += ' WHERE ' + where.join(' AND ');
+      if (this.orderCol) sql += ` ORDER BY "${this.orderCol}" ${this.orderAsc ? 'ASC' : 'DESC'}`;
+      if (this.limitVal) sql += ` LIMIT ${this.limitVal}`;
 
       if (this.countVal) {
         resolve({ data: null, count: 0, error: null });
         return;
       }
 
-      if (res.status === 404) { resolve({ data: null, error: null }); return; }
+      let data: any[];
 
-      let data = await res.json();
+      if (isTauri && invoke) {
+        const result = await invoke('db_query', { sql, params });
+        data = result.rows.map((row: any[]) => {
+          const obj: any = {};
+          result.columns.forEach((col: string, i: number) => {
+            obj[col] = row[i];
+          });
+          return obj;
+        });
+      } else {
+        const qs = new URLSearchParams();
+        if (this.orderCol) qs.set('order', `${this.orderCol}.${this.orderAsc ? 'asc' : 'desc'}`);
+        if (this.limitVal) qs.set('limit', String(this.limitVal));
+        const statusFilter = this.filters.find(f => f.col === 'status');
+        if (statusFilter) qs.set('status', statusFilter.val);
 
-      // Apply remaining filters (eq) client-side
-      for (const f of this.filters) {
-        if (f.col !== 'status') {
-          data = data.filter((r: any) => String(r[f.col]) === f.val);
+        const url = `${API}/${tn}${qs.toString() ? '?' + qs : ''}`;
+        const res = await fetch(url, { headers: headers() });
+
+        if (res.status === 404) { resolve({ data: null, error: null }); return; }
+
+        data = await res.json();
+
+        for (const f of this.filters) {
+          if (f.col !== 'status') {
+            data = data.filter((r: any) => String(r[f.col]) === f.val);
+          }
         }
       }
 
       if (this.maybeVal) { resolve({ data: data[0] || null, error: null }); return; }
-
       resolve({ data, error: null });
     } catch (err: any) {
       if (reject) reject(err);
@@ -124,12 +154,23 @@ class InsertBuilder {
   async then(resolve: (val: any) => any) {
     try {
       const tn = tableName(this.table);
-      const res = await fetch(`${API}/${tn}`, {
-        method: 'POST', headers: headers(),
-        body: JSON.stringify(this.data),
-      });
-      const data = await res.json();
-      resolve(res.ok ? { data, error: null } : { data: null, error: data });
+      const entry = Array.isArray(this.data) ? this.data[0] : this.data;
+
+      if (isTauri && invoke) {
+        const cols = Object.keys(entry).filter(k => k !== 'id' || entry[k]);
+        const vals = cols.map(k => entry[k]);
+        const placeholders = cols.map((_, i) => `?${i + 1}`);
+        const sql = `INSERT INTO "${tn}" (${cols.map(c => `"${c}"`).join(',')}) VALUES (${placeholders.join(',')})`;
+        await invoke('db_execute', { sql, params: vals });
+        resolve({ data: entry, error: null });
+      } else {
+        const res = await fetch(`${API}/${tn}`, {
+          method: 'POST', headers: headers(),
+          body: JSON.stringify(entry),
+        });
+        const data = await res.json();
+        resolve(res.ok ? { data, error: null } : { data: null, error: data });
+      }
     } catch (err: any) { resolve({ data: null, error: err }); }
   }
   catch(reject: (err: any) => any) { return this.then((v: any) => v).catch(reject); }
@@ -141,17 +182,28 @@ class UpdateBuilder {
   private id = '';
 
   constructor(table: string, data: any) { this.table = table; this.data = data; }
-  eq(col: string, val: string) { this.id = val; return this; }
+  eq(_col: string, val: string) { this.id = val; return this; }
 
   async then(resolve: (val: any) => any) {
     try {
       const tn = tableName(this.table);
-      const res = await fetch(`${API}/${tn}/${this.id}`, {
-        method: 'PATCH', headers: headers(),
-        body: JSON.stringify(this.data),
-      });
-      const data = await res.json();
-      resolve(res.ok ? { data, error: null } : { data: null, error: data });
+      const entry = this.data;
+
+      if (isTauri && invoke) {
+        const setClauses = Object.keys(entry).filter(k => entry[k] !== undefined).map((k, i) => `"${k}" = ?${i + 1}`);
+        const vals = Object.keys(entry).filter(k => entry[k] !== undefined).map(k => entry[k]);
+        const sql = `UPDATE "${tn}" SET ${setClauses.join(',')} WHERE "id" = ?${vals.length + 1}`;
+        vals.push(this.id);
+        await invoke('db_execute', { sql, params: vals });
+        resolve({ data: entry, error: null });
+      } else {
+        const res = await fetch(`${API}/${tn}/${this.id}`, {
+          method: 'PATCH', headers: headers(),
+          body: JSON.stringify(entry),
+        });
+        const data = await res.json();
+        resolve(res.ok ? { data, error: null } : { data: null, error: data });
+      }
     } catch (err: any) { resolve({ data: null, error: err }); }
   }
   catch(reject: (err: any) => any) { return this.then((v: any) => v).catch(reject); }
@@ -162,14 +214,21 @@ class DeleteBuilder {
   private id = '';
 
   constructor(table: string) { this.table = table; }
-  eq(col: string, val: string) { this.id = val; return this; }
+  eq(_col: string, val: string) { this.id = val; return this; }
 
   async then(resolve: (val: any) => any) {
     try {
       const tn = tableName(this.table);
-      const res = await fetch(`${API}/${tn}/${this.id}`, { method: 'DELETE', headers: headers() });
-      if (!res.ok) { const data = await res.json().catch(() => ({})); resolve({ data: null, error: data }); return; }
-      resolve({ data: null, error: null });
+
+      if (isTauri && invoke) {
+        const sql = `DELETE FROM "${tn}" WHERE "id" = ?1`;
+        await invoke('db_execute', { sql, params: [this.id] });
+        resolve({ data: null, error: null });
+      } else {
+        const res = await fetch(`${API}/${tn}/${this.id}`, { method: 'DELETE', headers: headers() });
+        if (!res.ok) { const data = await res.json().catch(() => ({})); resolve({ data: null, error: data }); return; }
+        resolve({ data: null, error: null });
+      }
     } catch (err: any) { resolve({ data: null, error: err }); }
   }
   catch(reject: (err: any) => any) { return this.then((v: any) => v).catch(reject); }

@@ -11,7 +11,12 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "migrate": "node scripts/migrate.cjs"
+    "migrate": "node scripts/migrate.cjs",
+    "migrate:sqlite": "node scripts/migrate-to-sqlite.cjs",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "icons": "node scripts/generate-icons.cjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
@@ -27,7 +32,7 @@
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@eslint/js": "^9.9.1",
+    "@tauri-apps/api": "^2.0.0",
     "@types/jsbarcode": "^3.11.4",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
