@@ -59,20 +59,20 @@ export default function PaymentModal({ student, onClose, onDone, alreadyPaid = 0
           <style>
             @page { margin: 10mm; }
             body { font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f5f5f5; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; min-height: 100vh; }
-            .print-btn { background: #1e3a5f; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-size: 14px; cursor: pointer; margin-bottom: 20px; }
+            .print-btn { background: #1e3a5f; color: white; border: none; border-radius: 8px; padding: 10px 24px; font-size: 16pt; cursor: pointer; margin-bottom: 20px; }
             .print-btn:hover { background: #2a5080; }
             .receipt { max-width: 340px; background: white; border-radius: 16px; box-shadow: 0 8px 40px rgba(0,0,0,0.15); overflow: hidden; }
             .rh { background: #1e3a5f; color: white; text-align: center; padding: 18px 20px; }
-            .rh h2 { margin: 0; font-size: 18px; }
-            .rh p { margin: 4px 0 0; font-size: 11px; opacity: 0.8; }
+            .rh h2 { margin: 0; font-size: 20pt; }
+            .rh p { margin: 4px 0 0; font-size: 12pt; opacity: 0.8; }
             .rbody { padding: 20px; }
-            .rtitle { text-align: center; font-size: 14px; font-weight: bold; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 15px; }
-            .rrow { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 13px; }
+            .rtitle { text-align: center; font-size: 16pt; font-weight: bold; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 10px; margin-bottom: 15px; }
+            .rrow { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #eee; font-size: 14pt; }
             .rrow .lbl { color: #888; }
             .rrow .val { font-weight: bold; color: #333; }
-            .ramount { text-align: center; margin: 15px 0; padding: 12px; background: #e8f5e9; border-radius: 12px; font-size: 24px; font-weight: bold; color: #2e7d32; }
-            .rf { text-align: center; padding: 12px; font-size: 10px; color: #aaa; border-top: 1px solid #eee; }
-            .rnum { text-align: center; font-size: 10px; color: #bbb; margin-top: 8px; }
+            .ramount { text-align: center; margin: 15px 0; padding: 12px; background: #e8f5e9; border-radius: 12px; font-size: 26pt; font-weight: bold; color: #2e7d32; }
+            .rf { text-align: center; padding: 12px; font-size: 11pt; color: #aaa; border-top: 1px solid #eee; }
+            .rnum { text-align: center; font-size: 11pt; color: #bbb; margin-top: 8px; }
             @media print { body { background: white; padding: 0; } .print-btn { display: none; } .receipt { box-shadow: none; border: 1px solid #ddd; } }
           </style></head><body>
           <button class="print-btn" onclick="window.print()">🖨️ طباعة الإيصال</button>

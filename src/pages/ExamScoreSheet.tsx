@@ -81,7 +81,7 @@ export default function ExamScoreSheet() {
           .no-print { display: none !important; }
           body { margin: 0; padding: 8mm; }
           @page { size: landscape; }
-          table { font-size: 9pt !important; }
+          table { font-size: 12pt !important; }
         }
       `}</style>
 

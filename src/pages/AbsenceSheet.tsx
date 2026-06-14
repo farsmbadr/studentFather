@@ -73,9 +73,9 @@ export default function AbsenceSheet() {
       <style>{`
         @media print {
           .no-print { display: none !important; }
-          body { margin: 0; padding: 3mm; font-size: 7px; }
+          body { margin: 0; padding: 3mm; font-size: 10pt; }
           @page { size: landscape; }
-          table { font-size: 6pt !important; }
+          table { font-size: 11pt !important; }
           th, td { padding: 1px 1px !important; }
           th, td { white-space: nowrap; }
         }

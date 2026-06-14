@@ -6,7 +6,7 @@ import ListTemplate from '../components/ListTemplate';
 import { useToast } from '../components/Toast';
 import JsBarcode from 'jsbarcode';
 import PaymentModal from '../components/PaymentModal';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 interface Student {
   id: string;
@@ -60,7 +60,7 @@ function StudentModal({ onClose, onSave, initial, groups, allSubjects, allGrades
     school: initial?.school || '',
     division: initial?.division || 'عام',
     parent_job: initial?.parent_job || '',
-    birth_date: initial?.birth_date?.slice(0, 10) || '',
+    birth_date: initial?.birth_date?.slice(0, 10) || new Date().toISOString().slice(0, 10),
     email: initial?.email || '',
   });
   const [showExtra, setShowExtra] = useState(!!initial);
@@ -185,6 +185,11 @@ function StudentModal({ onClose, onSave, initial, groups, allSubjects, allGrades
 
           {showExtra && (
             <>
+              <div>
+                <label className="text-xs text-gray-500 mb-1 block">ولي الأمر</label>
+                <input type="text" value={form.parent_name} onChange={e => set('parent_name', e.target.value)}
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400" />
+              </div>
               <div>
                 <label className="text-xs text-gray-500 mb-1 block">النوع</label>
                 <select value={form.gender} onChange={e => set('gender', e.target.value)}
@@ -410,7 +415,7 @@ export default function Students({ searchQuery = '', studentAction, onViewStuden
       const months: { remaining: number }[] = [];
       let yy = jd.getFullYear(), mm = jd.getMonth();
       while (yy < now.getFullYear() || (yy === now.getFullYear() && mm <= now.getMonth())) {
-        months.push({ remaining: Number(s.monthly_fee) });
+        months.push({ remaining: Math.max(0, Number(s.monthly_fee) - (yy === jd.getFullYear() && mm === jd.getMonth() ? Number(s.booking_deposit || 0) : 0)) });
         mm++; if (mm > 11) { mm = 0; yy++; }
       }
       for (const p of sortedPayments) {
@@ -547,6 +552,7 @@ export default function Students({ searchQuery = '', studentAction, onViewStuden
         <td>${s.grade}</td>
         <td>${s.gender}</td>
         <td style="direction:ltr;text-align:left">${s.phone}</td>
+        <td>${s.parent_name || '—'}</td>
         <td style="direction:ltr;text-align:left">${s.parent_phone || '—'}</td>
         <td>${s.group_name || '—'}</td>
         <td>${status}</td>
@@ -555,13 +561,11 @@ export default function Students({ searchQuery = '', studentAction, onViewStuden
     }).join('');
     w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>قائمة الطلاب</title>
       <style>
-        @page { size: landscape; margin: 14mm 3mm 10mm; }
-        * { font-family: 'Traditional Arabic', 'Arabic Typesetting', Arial, sans-serif; }
-        body { margin: 0; padding: 0; }
+        @page { size: landscape; margin: 5mm; }
         ${printHeaderStyle()}
-        .content { padding: 8mm 3mm 6mm; }
+        .content { padding: 2mm 0; }
         h2 { text-align: center; font-size: 14pt; color: #1e3a5f; margin: 0 0 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+        table { width: 100%; border-collapse: collapse; font-size: 12pt; }
         th { background: #1e3a5f; color: white; padding: 5px 3px; text-align: center; font-weight: bold; }
         td { padding: 3px 3px; border-bottom: 1px solid #ddd; text-align: center; }
         tr:nth-child(even) { background: #f8f9fa; }
@@ -570,10 +574,11 @@ export default function Students({ searchQuery = '', studentAction, onViewStuden
       <div class="content">
       <h2>قائمة الطلاب</h2>
       <table>
-        <thead><tr><th>#</th><th>اسم الطالب</th><th>المرحلة</th><th>النوع</th><th>موبايل الطالب</th><th>موبايل ولي الأمر</th><th>المجموعة</th><th>المصروفات</th><th>تاريخ التقديم</th></tr></thead>
+        <thead><tr><th>#</th><th>اسم الطالب</th><th>المرحلة</th><th>النوع</th><th>موبايل الطالب</th><th>ولي الأمر</th><th>موبايل ولي الأمر</th><th>المجموعة</th><th>المصروفات</th><th>تاريخ التقديم</th></tr></thead>
         <tbody>${rows}</tbody>
       </table>
       </div>
+      ${printFooterHtml()}
       </body></html>`);
     w.document.close();
     setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
@@ -700,15 +705,15 @@ export default function Students({ searchQuery = '', studentAction, onViewStuden
                       @page { margin: 10mm; size: auto; }
                       body { margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f0f0f0; }
                       .card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 30px 40px; text-align: center; width: 320px; margin: 0 auto; }
-                      .logo-bar { background: #1e3a5f; color: white; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-bottom: 20px; display:flex;align-items:center;justify-content:center;gap:8px; }
+                      .logo-bar { background: #1e3a5f; color: white; padding: 10px 20px; border-radius: 10px; font-size: 14pt; font-weight: bold; margin-bottom: 20px; display:flex;align-items:center;justify-content:center;gap:8px; }
                       .logo-bar img { height: 28px; width: auto; }
-                      .name { font-size: 22px; font-weight: bold; color: #1e3a5f; margin-bottom: 15px; }
-                      .info-row { display: flex; justify-content: center; gap: 20px; font-size: 13px; color: #555; margin-bottom: 8px; }
+                      .name { font-size: 24pt; font-weight: bold; color: #1e3a5f; margin-bottom: 15px; }
+                      .info-row { display: flex; justify-content: center; gap: 20px; font-size: 14pt; color: #555; margin-bottom: 8px; }
                       .info-row span { background: #f5f7fa; padding: 4px 12px; border-radius: 20px; }
                       .barcode-wrap { background: white; padding: 10px; border-radius: 8px; margin: 15px 0; }
                       .barcode-wrap img { width: 100%; max-width: 240px; }
-                      .code { font-size: 14px; color: #1e3a5f; font-weight: bold; letter-spacing: 2px; direction: ltr; }
-                      .footer { font-size: 10px; color: #aaa; margin-top: 12px; }
+                      .code { font-size: 16pt; color: #1e3a5f; font-weight: bold; letter-spacing: 2px; direction: ltr; }
+                      .footer { font-size: 11pt; color: #aaa; margin-top: 12px; }
                     </style></head><body>
                     <div class="card">
                       <div class="logo-bar">${centerLogo ? `<img src="${centerLogo}" alt="logo"/>` : ''}${centerName}</div>

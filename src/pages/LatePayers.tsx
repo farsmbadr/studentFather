@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { AlertCircle, Download, Printer, RefreshCw, Eye, MessageCircle, ArrowUpDown, ArrowUp, ArrowDown, Filter } from 'lucide-react';
 import { supabase } from '../supabaseClient';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 export default function LatePayers({ onViewStudent }: { onViewStudent?: (id: string) => void }) {
   const [allActive, setAllActive] = useState<any[]>([]);
@@ -101,17 +101,18 @@ const fmt = (n: number | string) => Math.round(Number(n));
     w.document.write(`<html dir="rtl"><head><meta charset="utf-8"><title>المتخلفون عن الدفع</title><style>
       @page{margin:10mm} body{font-family:Tahoma,Arial,sans-serif;padding:20px;padding-top:45px;padding-bottom:35px}
       ${printHeaderStyle()}
-      table{width:100%;border-collapse:collapse;font-size:12px}
+      table{width:100%;border-collapse:collapse;font-size:14pt}
       th{background:#dc2626;color:#fff;padding:8px;text-align:center}
       td{padding:6px;border:1px solid #ddd;text-align:center}
       tr:nth-child(even){background:#fef2f2}
       h1{text-align:center;color:#dc2626;margin-bottom:16px}
-      .total{text-align:center;font-size:14px;margin-top:12px;color:#666}
+      .total{text-align:center;font-size:16pt;margin-top:12px;color:#666}
     </style></head><body>
     ${printHeaderHtml(center)}
     <h1>المتخلفون عن الدفع - ${monthLabel}</h1>
     <table><thead><tr><th>#</th><th>اسم الطالب</th><th>الصف</th><th>المجموعة</th><th>رقم الموبايل</th><th>موبايل ولي الأمر</th><th>المبلغ المستحق</th></tr></thead><tbody>${sorted.map((st, i) => `<tr><td>${i + 1}</td><td>${st.name}</td><td>${st.grade}</td><td>${st.group_name || '—'}</td><td>${st.phone || '—'}</td><td>${st.parent_phone || '—'}</td><td>${fmt(owed(st))} ج</td></tr>`).join('')}</tbody></table>
     <p class="total">الإجمالي: ${fmt(totalExpected)} ج - عدد الطلاب: ${lateStudents.length}</p>
+    ${printFooterHtml()}
     </body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 500);

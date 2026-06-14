@@ -109,7 +109,7 @@ export default function Absence({ onViewStudent }: { onViewStudent?: (id: string
         const months: { key: string; remaining: number }[] = [];
         let yy = jd.getFullYear(), mm = jd.getMonth();
         while (yy < now.getFullYear() || (yy === now.getFullYear() && mm <= now.getMonth())) {
-          months.push({ key: `${yy}-${String(mm + 1).padStart(2, '0')}`, remaining: Number(s.monthly_fee) });
+          months.push({ key: `${yy}-${String(mm + 1).padStart(2, '0')}`, remaining: Math.max(0, Number(s.monthly_fee) - (yy === jd.getFullYear() && mm === jd.getMonth() ? Number(s.booking_deposit || 0) : 0)) });
           mm++; if (mm > 11) { mm = 0; yy++; }
         }
         // Apply each payment to oldest remaining debt first

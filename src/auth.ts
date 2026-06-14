@@ -15,7 +15,7 @@ export function getCurrentUser(): UserInfo {
     try { return JSON.parse(raw); }
     catch {}
   }
-  return { id: '', name: 'مدير النظام', username: 'admin', role: 'مدير', permissions: ['all'] };
+  return { id: '', name: 'مدير النظام', username: 'admin', role: 'مدير', permissions: ['all'], is_super_admin: true };
 }
 
 export function setCurrentUser(user: UserInfo) {

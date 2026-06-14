@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ArrowRight, User, Edit2, Trash2, Printer, Sticker, FileText, ClipboardList, X, MessageCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useToast } from '../components/Toast';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 interface Student {
   id: string; name: string; code: string; grade: string; gender: string; group_name: string;
@@ -207,22 +207,22 @@ export default function StudentProfile({ studentId, onBack, onEdit, onDelete }: 
     const payStatus = totalOutstanding > 0 ? `إجمالي المتأخر ${totalOutstanding} ج` : 'مدفوع بالكامل ✓';
     w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>تقرير ${student.name}</title>
       <style>
-        @page { size: A4 portrait; margin: 18mm 8mm 14mm; }
+        @page { size: A4 portrait; margin: 5mm; }
         * { font-family: 'Traditional Arabic', 'Arabic Typesetting', Arial, sans-serif; }
-        body { margin: 0; padding: 0; }
+        body { }
         ${printHeaderStyle()}
         .content { padding: 6mm 5mm; }
         h2 { text-align: center; font-size: 16pt; color: #1e3a5f; margin: 0 0 10px; }
-        .info-table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 12px; }
+        .info-table { width: 100%; border-collapse: collapse; font-size: 12pt; margin-bottom: 12px; }
         .info-table th { background: #1e3a5f; color: white; padding: 5px 8px; text-align: right; font-weight: bold; }
         .info-table td { padding: 4px 8px; border-bottom: 1px solid #ddd; font-weight: 600; }
         .info-table tr:nth-child(even) td { background: #f8f9fa; }
         .info-table td:first-child { color: #666; font-weight: 400; width: 35%; }
-        .section-title { font-size: 10pt; font-weight: bold; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 3px; margin: 14px 0 6px; }
-        table.data-table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+        .section-title { font-size: 13pt; font-weight: bold; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 3px; margin: 14px 0 6px; }
+        table.data-table { width: 100%; border-collapse: collapse; font-size: 12pt; }
         table.data-table th { background: #eef2f7; padding: 4px 6px; border: 1px solid #ccc; text-align: center; font-weight: bold; }
         table.data-table td { padding: 3px 6px; border: 1px solid #ddd; text-align: center; }
-        .status-badge { display: inline-block; padding: 0 6px; border-radius: 10px; font-weight: bold; font-size: 8pt; background: #e8f5e9; color: #2e7d32; }
+        .status-badge { display: inline-block; padding: 0 6px; border-radius: 10px; font-weight: bold; font-size: 12pt; background: #e8f5e9; color: #2e7d32; }
         .status-badge.partial { background: #fff3e0; color: #e65100; }
         .status-badge.unpaid { background: #ffebee; color: #c62828; }
       </style></head><body>
@@ -261,7 +261,7 @@ export default function StudentProfile({ studentId, onBack, onEdit, onDelete }: 
           <table class="data-table"><thead><tr><th>#</th><th>الملحوظة</th><th>التاريخ</th></tr></thead>
           <tbody>${notes.map((n, i) => `<tr><td>${i+1}</td><td>${n.note || ''}</td><td>${n.date ? n.date.split('T')[0] : '—'}</td></tr>`).join('')}</tbody></table>` : ''}
       </div>
-      </body></html>`);
+      ${printFooterHtml()}</body></html>`);
     w.document.close();
     setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
   };
@@ -276,7 +276,9 @@ export default function StudentProfile({ studentId, onBack, onEdit, onDelete }: 
   let y = joinDate.getFullYear();
   let m = joinDate.getMonth();
   while (y < now.getFullYear() || (y === now.getFullYear() && m <= now.getMonth())) {
-    months.push({ key: `${y}-${String(m + 1).padStart(2, '0')}`, label: `${String(m + 1).padStart(2, '0')}/${y}`, expected: fee, paid: 0, remaining: fee });
+    const isFirst = y === joinDate.getFullYear() && m === joinDate.getMonth();
+    const startRemaining = fee - (isFirst ? Number(student.booking_deposit || 0) : 0);
+    months.push({ key: `${y}-${String(m + 1).padStart(2, '0')}`, label: `${String(m + 1).padStart(2, '0')}/${y}`, expected: fee, paid: isFirst ? Math.min(Number(student.booking_deposit || 0), fee) : 0, remaining: Math.max(0, startRemaining) });
     m++; if (m > 11) { m = 0; y++; }
   }
   for (const p of sortedPayments) {
@@ -303,7 +305,6 @@ export default function StudentProfile({ studentId, onBack, onEdit, onDelete }: 
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   });
   const thisMonthPaid = thisMonthPayments.reduce((s, p) => s + Number(p.amount), 0);
-  const depositCredit = (student.booking_deposit && now.getFullYear() === joinDate.getFullYear() && now.getMonth() === joinDate.getMonth()) ? student.booking_deposit : 0;
   const monthBalance = Math.max(0, fee - thisMonthPaid);
 
   const printBarcode = async () => {
@@ -320,15 +321,15 @@ export default function StudentProfile({ studentId, onBack, onEdit, onDelete }: 
         @page { margin: 10mm; size: auto; }
         body { margin: 0; padding: 20px; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; background: #f0f0f0; }
         .card { background: white; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.15); padding: 30px 40px; text-align: center; width: 320px; margin: 0 auto; }
-        .logo-bar { background: #1e3a5f; color: white; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: bold; margin-bottom: 20px; display:flex;align-items:center;justify-content:center;gap:8px; }
+        .logo-bar { background: #1e3a5f; color: white; padding: 10px 20px; border-radius: 10px; font-size: 14pt; font-weight: bold; margin-bottom: 20px; display:flex;align-items:center;justify-content:center;gap:8px; }
         .logo-bar img { height: 28px; width: auto; }
-        .name { font-size: 22px; font-weight: bold; color: #1e3a5f; margin-bottom: 15px; }
-        .info-row { display: flex; justify-content: center; gap: 20px; font-size: 13px; color: #555; margin-bottom: 8px; }
+        .name { font-size: 24pt; font-weight: bold; color: #1e3a5f; margin-bottom: 15px; }
+        .info-row { display: flex; justify-content: center; gap: 20px; font-size: 14pt; color: #555; margin-bottom: 8px; }
         .info-row span { background: #f5f7fa; padding: 4px 12px; border-radius: 20px; }
         .barcode-wrap { background: white; padding: 10px; border-radius: 8px; margin: 15px 0; }
         .barcode-wrap img { width: 100%; max-width: 240px; }
-        .code { font-size: 14px; color: #1e3a5f; font-weight: bold; letter-spacing: 2px; direction: ltr; }
-        .footer { font-size: 10px; color: #aaa; margin-top: 12px; }
+        .code { font-size: 16pt; color: #1e3a5f; font-weight: bold; letter-spacing: 2px; direction: ltr; }
+        .footer { font-size: 11pt; color: #aaa; margin-top: 12px; }
       </style></head><body>
       <div class="card">
       <div class="logo-bar">${centerLogo ? `<img src="${centerLogo}" alt="logo"/>` : ''}${centerName}</div>
@@ -337,7 +338,7 @@ export default function StudentProfile({ studentId, onBack, onEdit, onDelete }: 
       <div class="barcode-wrap"><img src="${barcodeData}" alt="barcode" /></div>
       <div class="code">${student.code}</div>
       <div class="footer">${centerName} © ${new Date().getFullYear()}</div>
-      </div></body></html>`);
+      </div>${printFooterHtml()}</body></html>`);
     w.document.close();
     setTimeout(() => { w.focus(); w.print(); }, 500);
   };
@@ -360,25 +361,25 @@ export default function StudentProfile({ studentId, onBack, onEdit, onDelete }: 
 
     w.document.write(`<!DOCTYPE html><html dir="rtl"><head><title>وثيقة التقديم - ${student.name}</title>
       <style>
-        @page { size: A4; margin: 15mm 12mm; }
+        @page { size: A4; margin: 5mm; }
         body { margin: 0; padding: 0; font-family: 'Traditional Arabic', 'Arabic Typesetting', Arial, sans-serif; color: #222; background: #fff; }
         ${printHeaderStyle()}
         .doc { max-width: 170mm; margin: 0 auto; }
         .doc-title { text-align: center; font-size: 18pt; font-weight: bold; color: #1e3a5f; margin: 20px 0; padding: 8px 0; border-bottom: 2px solid #1e3a5f; }
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 30px; margin: 16px 0; }
         .info-row { display: flex; align-items: baseline; border-bottom: 1px dotted #ddd; padding: 6px 0; }
-        .info-row .label { min-width: 90px; font-size: 11pt; color: #1e3a5f; font-weight: bold; }
-        .info-row .value { font-size: 12pt; color: #222; }
+        .info-row .label { min-width: 90px; font-size: 14pt; color: #1e3a5f; font-weight: bold; }
+        .info-row .value { font-size: 14pt; color: #222; }
         .barcode-wrap { text-align: center; margin: 20px 0 10px; }
         .barcode-wrap img { max-width: 220px; }
         .code-text { text-align: center; font-size: 14pt; font-weight: bold; color: #1e3a5f; letter-spacing: 3px; direction: ltr; margin-top: 4px; }
-        .terms { margin-top: 25px; padding-top: 15px; border-top: 1px solid #ccc; font-size: 9pt; color: #555; line-height: 1.8; }
-        .terms h3 { font-size: 11pt; color: #1e3a5f; margin: 0 0 8px; }
+        .terms { margin-top: 25px; padding-top: 15px; border-top: 1px solid #ccc; font-size: 12pt; color: #555; line-height: 1.8; }
+        .terms h3 { font-size: 14pt; color: #1e3a5f; margin: 0 0 8px; }
         .signatures { display: flex; justify-content: space-between; margin-top: 30px; padding-top: 15px; border-top: 1px solid #ccc; }
         .signature { text-align: center; min-width: 120px; }
         .signature .line { width: 140px; height: 1px; border-top: 1px solid #333; margin: 30px auto 6px; }
-        .signature .label { font-size: 10pt; color: #555; }
-        .footer-note { text-align: center; font-size: 9pt; color: #999; margin-top: 25px; border-top: 1px solid #eee; padding-top: 10px; }
+        .signature .label { font-size: 13pt; color: #555; }
+        .footer-note { text-align: center; font-size: 12pt; color: #999; margin-top: 25px; border-top: 1px solid #eee; padding-top: 10px; }
         @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
       </style></head><body>
       ${printHeaderHtml({ center_name: centerName, address: centerAddress, phone: centerPhone, logo: centerLogo })}
@@ -419,7 +420,7 @@ export default function StudentProfile({ studentId, onBack, onEdit, onDelete }: 
           <div class="signature"><div class="line"></div><span class="label">توقيع إدارة السنتر</span></div>
         </div>
         <div class="footer-note">${centerName} © ${new Date().getFullYear()} - جميع الحقوق محفوظة</div>
-      </div></body></html>`);
+      </div>${printFooterHtml()}</body></html>`);
     w.document.close();
     setTimeout(() => { w.focus(); w.print(); }, 500);
   };

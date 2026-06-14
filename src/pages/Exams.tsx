@@ -3,7 +3,7 @@ import { Plus, FileText, Edit2, Trash2, Users, X, CheckCircle } from 'lucide-rea
 import { supabase } from '../supabaseClient';
 import ListTemplate from '../components/ListTemplate';
 import { useToast } from '../components/Toast';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 import { Page } from '../types';
 
 export default function Exams({ onNavigate }: { onNavigate?: (page: Page) => void }) {
@@ -24,14 +24,20 @@ export default function Exams({ onNavigate }: { onNavigate?: (page: Page) => voi
   const [examResults, setExamResults] = useState<any[]>([]);
   const [scoreInputs, setScoreInputs] = useState<Record<string, string>>({});
   const [savingScores, setSavingScores] = useState(false);
+  const [filterSubject, setFilterSubject] = useState('');
+  const [filterGrade, setFilterGrade] = useState('');
+  const [allSubjects, setAllSubjects] = useState<string[]>([]);
+  const [allGrades, setAllGrades] = useState<string[]>([]);
 
   const load = async () => {
     setLoading(true);
-    const [examData, resultsData, studData, cfg] = await Promise.all([
+    const [examData, resultsData, studData, cfg, subRes, grdRes] = await Promise.all([
       supabase.from('exams').select('*').order('date', { ascending: false }),
       supabase.from('exam_results').select('exam_title'),
       supabase.from('students').select('*').eq('status', 'active'),
       supabase.from('center_config').select('center_name,address,phone,logo').maybeSingle(),
+      supabase.from('subjects').select('name').order('name'),
+      supabase.from('grades').select('name').order('name'),
     ]);
     if (cfg?.data) { setCenterName(cfg.data.center_name || 'CenterMasr'); setCenterAddress(cfg.data.address || ''); setCenterPhone(cfg.data.phone || ''); setCenterLogo(cfg.data.logo || ''); }
     const counts: Record<string, number> = {};
@@ -41,6 +47,8 @@ export default function Exams({ onNavigate }: { onNavigate?: (page: Page) => voi
     setExams(examData?.data || []);
     setExamCounts(counts);
     setStudents(studData?.data || []);
+    setAllSubjects((subRes?.data || []).map((s: any) => s.name));
+    setAllGrades((grdRes?.data || []).map((g: any) => g.name));
     const groups = [...new Set((studData?.data || []).map((s: any) => s.group_name).filter(Boolean))] as string[];
     setAllGroups(groups);
     setLoading(false);
@@ -56,9 +64,11 @@ export default function Exams({ onNavigate }: { onNavigate?: (page: Page) => voi
     load();
   };
 
-  const filtered = exams.filter(e =>
-    e.title.includes(search) || e.subject.includes(search) || e.grade.includes(search)
-  );
+  const filtered = exams.filter(e => {
+    if (filterSubject && e.subject !== filterSubject) return false;
+    if (filterGrade && e.grade !== filterGrade) return false;
+    return e.title.includes(search) || e.subject.includes(search) || e.grade.includes(search);
+  });
 
   const handlePrint = () => {
     const w = window.open('', '_blank');
@@ -85,7 +95,7 @@ export default function Exams({ onNavigate }: { onNavigate?: (page: Page) => voi
         ${printHeaderStyle()}
         .content { padding: 6mm 5mm; }
         h2 { text-align: center; font-size: 16pt; color: #1e3a5f; margin: 0 0 10px; }
-        table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+        table { width: 100%; border-collapse: collapse; font-size: 12pt; }
         th { background: #1e3a5f; color: white; padding: 5px 6px; text-align: center; font-weight: bold; }
         td { padding: 4px 6px; border-bottom: 1px solid #ddd; text-align: center; }
         tr:nth-child(even) td { background: #f8f9fa; }
@@ -98,7 +108,7 @@ export default function Exams({ onNavigate }: { onNavigate?: (page: Page) => voi
         <tbody>${rows}</tbody>
       </table>
       </div>
-      </body></html>`);
+      ${printFooterHtml()}</body></html>`);
     w.document.close();
     setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
   };
@@ -119,6 +129,20 @@ export default function Exams({ onNavigate }: { onNavigate?: (page: Page) => voi
         onExport={() => {}}
         onPrint={handlePrint}
         onRefresh={load}
+        filters={<><select value={filterSubject} onChange={e => setFilterSubject(e.target.value)}
+          className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 min-w-[120px]">
+          <option value="">كل المواد</option>
+          {allSubjects.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
+        <select value={filterGrade} onChange={e => setFilterGrade(e.target.value)}
+          className="border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-pink-400 min-w-[120px]">
+          <option value="">كل الصفوف</option>
+          {allGrades.map(g => <option key={g} value={g}>{g}</option>)}
+        </select>
+        {(filterSubject || filterGrade) && (
+          <button onClick={() => { setFilterSubject(''); setFilterGrade(''); }}
+            className="text-xs text-gray-400 hover:text-gray-600">إعادة تعيين</button>
+        )}</>}
         columns={[
           { key: 'exam_type', label: 'النوع', render: e => <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${e.exam_type === 'إلكتروني' ? 'bg-purple-100 text-purple-700' : 'bg-amber-100 text-amber-700'}`}>{e.exam_type === 'ورقة' ? 'ورقي' : e.exam_type}</span> },
           { key: 'title', label: 'عنوان الاختبار', render: e => <span className="font-semibold text-gray-800">{e.title}</span> },

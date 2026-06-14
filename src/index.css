@@ -235,13 +235,13 @@ input, select, textarea {
   }
 
   table {
-    font-size: 7pt !important;
+    font-size: 12pt !important;
     width: 100% !important;
     table-layout: fixed !important;
   }
 
   th, td {
-    padding: 2px 3px !important;
+    padding: 4px 5px !important;
     white-space: normal !important;
     word-break: break-word !important;
     text-align: right !important;
@@ -266,9 +266,9 @@ input, select, textarea {
     background: #1e3a5f;
     color: white;
     text-align: center;
-    padding: 1.5mm 4mm;
+    padding: 2mm 4mm;
     z-index: 9999;
-    font-size: 7.5pt;
+    font-size: 14pt;
   }
 
   .print-header-content {
@@ -280,7 +280,7 @@ input, select, textarea {
   }
 
   .print-logo {
-    height: 6mm;
+    height: 8mm;
     width: auto;
     object-fit: contain;
     border-radius: 1mm;
@@ -295,8 +295,8 @@ input, select, textarea {
     background: #1e3a5f;
     color: white;
     text-align: center;
-    font-size: 6.5pt;
-    padding: 1mm 4mm;
+    font-size: 12pt;
+    padding: 2mm 4mm;
     z-index: 9999;
   }
 }

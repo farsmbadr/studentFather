@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 import ListTemplate from '../components/ListTemplate';
 import { useToast } from '../components/Toast';
 import { getCurrentUser } from '../auth';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 const categories = ['إيجار', 'مرتبات', 'فواتير', 'صيانة', 'نقل', 'دعاية', 'أخرى'];
 
@@ -118,14 +118,14 @@ export default function Expenses() {
     w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>المصروفات</title>
     <style>
       *{margin:0;padding:0;box-sizing:border-box;font-family:Tahoma,Arial,sans-serif;}
-      body{padding:20px;padding-top:45px;padding-bottom:35px;color:#333;font-size:12px;}
+      body{padding:20px;padding-top:45px;padding-bottom:35px;color:#333;font-size:14pt;}
       ${printHeaderStyle()}
       h3{text-align:center;color:#c0392b;margin-bottom:15px;}
       table{width:100%;border-collapse:collapse;margin-top:10px;}
-      th{background:#c0392b;color:#fff;padding:7px 5px;font-size:11px;text-align:center;}
-      td{padding:5px;text-align:center;border-bottom:1px solid #eee;font-size:11px;}
+      th{background:#c0392b;color:#fff;padding:7px 5px;font-size:12pt;text-align:center;}
+      td{padding:5px;text-align:center;border-bottom:1px solid #eee;font-size:12pt;}
       tr:nth-child(even){background:#f9f9f9;}
-      .total{text-align:center;font-size:14px;margin-top:12px;color:#666;font-weight:bold;}
+      .total{text-align:center;font-size:16pt;margin-top:12px;color:#666;font-weight:bold;}
     </style></head><body>
     ${printHeaderHtml(center)}
     <h3>تقرير المصروفات والإهلاكات</h3>
@@ -133,6 +133,7 @@ export default function Expenses() {
     ${filtered.map((e: any, i: number) => `<tr><td>${i + 1}</td><td>${e.title}</td><td>${fmt(e.amount)} ج</td><td>${e.category}</td><td>${(e.date || '').slice(0, 10)}</td><td>${e.created_by || '—'}</td></tr>`).join('')}
     </tbody></table>
     <p class="total">الإجمالي: ${fmt(total)} ج</p>
+    ${printFooterHtml()}
     </body></html>`);
     w.document.close();
     setTimeout(() => w.print(), 500);

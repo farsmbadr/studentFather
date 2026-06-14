@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   LayoutDashboard, Users, ClipboardList, UserX, FileText, BookOpen,
-  Printer, Database, Group, Bell, UserCog, LogIn,
+  Printer, Database, Group, Bell, UserCog, LogIn, MessageSquare,
   ChevronDown, ChevronLeft, Eye, Plus, FileText as FileTextIcon, Archive,
   Server, GraduationCap, Sliders, AlertTriangle, Trophy, BarChart3, ScrollText,
   HelpCircle, TrendingUp, CheckCircle, Truck, Wallet, DollarSign, CreditCard,
@@ -83,6 +83,7 @@ const navItems: NavItem[] = [
       { id: 'classes', label: 'المعلمين', icon: <GraduationCap size={14} /> },
       { id: 'groups', label: 'المجموعات', icon: <Group size={14} /> },
       { id: 'notifications', label: 'الإشعارات', icon: <Bell size={14} /> },
+      { id: 'parent-messages', label: 'إشعارات أولياء الأمور', icon: <MessageSquare size={14} /> },
       { id: 'settings', label: 'الإعدادات', icon: <Sliders size={14} /> },
       { id: 'users', label: 'المستخدمين', icon: <UserCog size={14} /> },
       { id: 'login-log', label: 'سجلات الدخول', icon: <LogIn size={14} /> },

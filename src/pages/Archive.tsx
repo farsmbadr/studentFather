@@ -3,7 +3,7 @@ import { Eye, Trash2, RotateCcw, Archive as ArchiveIcon } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import ListTemplate from '../components/ListTemplate';
 import { useToast } from '../components/Toast';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 interface Student {
   id: string;
@@ -98,7 +98,7 @@ export default function Archive({ onViewStudent }: { onViewStudent?: (id: string
               <td style="direction:ltr;text-align:left">${s.parent_phone || '—'}</td>
               <td>${s.group_name || '—'}</td>
               <td>${s.deletion_reason || '—'}</td>
-              <td style="font-size:8pt">${s.deleted_at ? new Date(s.deleted_at).toLocaleString('ar-EG') : '—'}</td>
+              <td>${s.deleted_at ? new Date(s.deleted_at).toLocaleString('ar-EG') : '—'}</td>
             </tr>`).join('');
           w.document.write(`<!DOCTYPE html><html dir="rtl">
           <head><meta charset="UTF-8"><title>أرشيف الطلاب</title>
@@ -109,11 +109,11 @@ export default function Archive({ onViewStudent }: { onViewStudent?: (id: string
             ${printHeaderStyle()}
             .content { padding: 8mm 3mm 6mm; }
             h2 { text-align: center; font-size: 14pt; color: #1e3a5f; margin: 0 0 8px; }
-            table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+            table { width: 100%; border-collapse: collapse; font-size: 12pt; }
             th { background: #1e3a5f; color: white; padding: 5px 3px; text-align: center; font-weight: bold; }
             td { padding: 3px 3px; border-bottom: 1px solid #ddd; text-align: center; }
             tr:nth-child(even) { background: #f8f9fa; }
-            .count { text-align: center; font-size: 9pt; color: #666; margin-top: 6px; }
+            .count { text-align: center; font-size: 12pt; color: #666; margin-top: 6px; }
           </style></head><body>
           ${printHeaderHtml({ center_name: centerName, address: centerAddress, phone: centerPhone, logo: centerLogo })}
           <div class="content">
@@ -124,7 +124,7 @@ export default function Archive({ onViewStudent }: { onViewStudent?: (id: string
           </table>
           <div class="count">إجمالي: ${filtered.length} طلاب</div>
           </div>
-          </body></html>`);
+          ${printFooterHtml()}</body></html>`);
           w.document.close();
           setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
         }}

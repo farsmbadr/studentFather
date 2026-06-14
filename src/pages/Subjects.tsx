@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BookOpen, Plus, Edit2, Trash2, X, Users, UserCheck, DollarSign, Printer, FileDown, RefreshCw } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useToast } from '../components/Toast';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 const SUBJECT_ICONS: Record<string, string> = {
   رياضي: '📐', بدني: '🏋️',
@@ -203,7 +203,7 @@ export default function Subjects() {
         ${printHeaderStyle()}
         .content { padding: 8mm 3mm 6mm; }
         h2 { text-align: center; font-size: 14pt; color: #1e3a5f; margin: 0 0 8px; }
-        table { width: 100%; border-collapse: collapse; font-size: 8pt; }
+        table { width: 100%; border-collapse: collapse; font-size: 12pt; }
         th { background: #1e3a5f; color: white; padding: 5px 3px; text-align: center; font-weight: bold; }
         td { padding: 3px 3px; border-bottom: 1px solid #ddd; text-align: center; }
         tr:nth-child(even) { background: #f8f9fa; }
@@ -216,7 +216,7 @@ export default function Subjects() {
         <tbody>${rows}</tbody>
       </table>
       </div>
-      </body></html>`);
+      ${printFooterHtml()}</body></html>`);
     w.document.close();
     setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
   };

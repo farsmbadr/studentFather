@@ -11,17 +11,13 @@ export default function ExamAdd({ onNavigate }: { onNavigate?: (page: Page) => v
   const [subjects, setSubjects] = useState<string[]>([]);
   const [teachers, setTeachers] = useState<any[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
-  const [customGrade, setCustomGrade] = useState(false);
-  const [customSubject, setCustomSubject] = useState(false);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    // Load existing data for dropdowns
     supabase.from('subjects').select('name').order('name').then(({ data }) => setSubjects((data || []).map((s: any) => s.name)));
     supabase.from('teachers').select('id, name').order('name').then(({ data }) => setTeachers(data || []));
     supabase.from('grades').select('name').order('name').then(({ data }) => setGrades((data || []).map((g: any) => g.name)));
 
-    // Check if editing
     const stored = localStorage.getItem('exam-edit');
     if (stored) {
       try {
@@ -50,12 +46,6 @@ export default function ExamAdd({ onNavigate }: { onNavigate?: (page: Page) => v
     setSaving(true);
     const payload = { ...form, date: form.date ? new Date(form.date).toISOString() : new Date().toISOString() };
     try {
-      // Save custom grade if new
-      if (customGrade && form.grade.trim() && !grades.includes(form.grade)) {
-        await supabase.from('grades').insert({ name: form.grade.trim() });
-        setGrades(prev => [...prev, form.grade.trim()].sort());
-        setCustomGrade(false);
-      }
       let examId = editingId;
       if (editingId) await supabase.from('exams').update(payload).eq('id', editingId);
       else {
@@ -91,7 +81,6 @@ export default function ExamAdd({ onNavigate }: { onNavigate?: (page: Page) => v
           </div>
         </div>
         <div className="p-6 space-y-4">
-          {/* Exam Type */}
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block font-semibold">نوع الاختبار</label>
             <div className="flex gap-4">
@@ -104,7 +93,6 @@ export default function ExamAdd({ onNavigate }: { onNavigate?: (page: Page) => v
             </div>
           </div>
 
-          {/* Title */}
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block font-semibold">عنوان الاختبار <span className="text-red-500">*</span></label>
             <input type="text" value={form.title} placeholder="مثال: اختبار منتصف الفصل"
@@ -112,30 +100,15 @@ export default function ExamAdd({ onNavigate }: { onNavigate?: (page: Page) => v
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" />
           </div>
 
-          {/* Subject */}
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block font-semibold">المادة <span className="text-red-500">*</span></label>
-            {!customSubject ? (
-              <div className="flex gap-2">
-                <select value={form.subject} onChange={e => { const v = e.target.value; if (v === '__new__') setCustomSubject(true); else set('subject', v); }}
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                  <option value="">اختر المادة</option>
-                  {subjects.map(s => <option key={s} value={s}>{s}</option>)}
-                  <option value="__new__">إضافة مادة جديدة...</option>
-                </select>
-              </div>
-            ) : (
-              <div className="flex gap-2">
-                <input type="text" value={form.subject} placeholder="أدخل اسم المادة"
-                  onChange={e => set('subject', e.target.value)}
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" />
-                <button onClick={() => { setCustomSubject(false); set('subject', ''); }}
-                  className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl">إلغاء</button>
-              </div>
-            )}
+            <select value={form.subject} onChange={e => set('subject', e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">اختر المادة</option>
+              {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
           </div>
 
-          {/* Teacher */}
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block font-semibold">المعلم</label>
             <select value={form.teacher} onChange={e => set('teacher', e.target.value)}
@@ -145,28 +118,15 @@ export default function ExamAdd({ onNavigate }: { onNavigate?: (page: Page) => v
             </select>
           </div>
 
-          {/* Grade */}
           <div>
             <label className="text-xs text-gray-500 mb-1.5 block font-semibold">الصف الدراسي</label>
-            {!customGrade ? (
-              <select value={form.grade} onChange={e => { const v = e.target.value; if (v === '__new__') setCustomGrade(true); else set('grade', v); }}
-                className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                <option value="">اختر الصف</option>
-                {grades.map(g => <option key={g} value={g}>{g}</option>)}
-                <option value="__new__">إضافة صف جديد...</option>
-              </select>
-            ) : (
-              <div className="flex gap-2">
-                <input type="text" value={form.grade} placeholder="أدخل اسم الصف"
-                  onChange={e => set('grade', e.target.value)}
-                  className="flex-1 border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all" />
-                <button onClick={() => { setCustomGrade(false); set('grade', ''); }}
-                  className="px-3 py-2 text-xs text-gray-500 hover:text-gray-700 border border-gray-200 rounded-xl whitespace-nowrap">إلغاء</button>
-              </div>
-            )}
+            <select value={form.grade} onChange={e => set('grade', e.target.value)}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="">اختر الصف</option>
+              {grades.map(g => <option key={g} value={g}>{g}</option>)}
+            </select>
           </div>
 
-          {/* Duration + Date */}
           <div className="grid grid-cols-3 gap-4">
             <div>
               <label className="text-xs text-gray-500 mb-1.5 block font-semibold">المدة (بالدقيقة)</label>
@@ -185,7 +145,6 @@ export default function ExamAdd({ onNavigate }: { onNavigate?: (page: Page) => v
             </div>
           </div>
 
-          {/* Save */}
           <button onClick={save} disabled={saving}
             className="w-full py-3 bg-gradient-to-l from-blue-500 to-blue-600 text-white rounded-xl font-bold text-sm hover:from-blue-600 hover:to-blue-700 transition-all disabled:opacity-50 shadow-md shadow-blue-200">
             {saving ? 'جاري الحفظ...' : (isEdit ? 'تحديث الاختبار' : 'إضافة الاختبار')}

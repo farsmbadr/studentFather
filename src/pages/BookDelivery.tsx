@@ -117,11 +117,13 @@ export default function BookDelivery() {
 
   const payBook = async () => {
     if (!payDelivery || !payAmount || payAmount <= 0) return show('الرجاء إدخال المبلغ', 'error');
+    const d = payDelivery;
+    const rem = Number(d.remaining || (Number(d.total_price || 0) - Number(d.paid_amount || 0)));
+    if (payAmount > rem) return show('لا يمكن الدفع أكثر من المتبقي', 'error');
     setPaySaving(true);
     try {
-      const d = payDelivery;
       const newPaid = Number(d.paid_amount || 0) + payAmount;
-      const newRemaining = Math.max(0, Number(d.total_price || 0) - newPaid);
+      const newRemaining = Math.max(0, rem - payAmount);
       await supabase.from('book_deliveries').update({ paid_amount: newPaid, remaining: newRemaining }).eq('id', d.id);
       const student = getStudent(d.student_id);
       const newBalance = Math.max(0, (Number(student?.balance) || 0) - payAmount);
@@ -270,13 +272,13 @@ export default function BookDelivery() {
     w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>قائمة التسليمات</title>
       <style>
         *{margin:0;padding:0;box-sizing:border-box;font-family:Tahoma,Arial,sans-serif;}
-        body{padding:20px;color:#333;font-size:12px;}
+        body{padding:20px;color:#333;font-size:14pt;}
         h2{text-align:center;margin-bottom:15px;color:#c0392b;}
         table{width:100%;border-collapse:collapse;}
-        th{background:#c0392b;color:#fff;padding:7px 5px;font-size:11px;text-align:center;}
-        td{padding:5px;text-align:center;border-bottom:1px solid #eee;font-size:11px;}
+        th{background:#c0392b;color:#fff;padding:7px 5px;font-size:12pt;text-align:center;}
+        td{padding:5px;text-align:center;border-bottom:1px solid #eee;font-size:12pt;}
         tr:nth-child(even){background:#f9f9f9;}
-        .footer{text-align:center;margin-top:15px;padding-top:10px;border-top:1px solid #ddd;color:#999;font-size:10px;}
+        .footer{text-align:center;margin-top:15px;padding-top:10px;border-top:1px solid #ddd;color:#999;font-size:11pt;}
       </style></head><body>
       <h2>قائمة التسليمات</h2>
       <table><thead><tr>${Object.keys(rows[0] || {}).map(k => `<th>${k}</th>`).join('')}</tr></thead><tbody>

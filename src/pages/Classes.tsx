@@ -3,7 +3,7 @@ import { X, UserCog, Edit2, Trash2, Plus, Check, ChevronDown } from 'lucide-reac
 import { supabase } from '../supabaseClient';
 import ListTemplate from '../components/ListTemplate';
 import { useToast } from '../components/Toast';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 interface TeacherItem {
   id: string;
@@ -220,7 +220,7 @@ export default function Classes() {
     const enriched = (tRes.data || []).map((t: any) => ({
       ...t,
       subjects: stMap[t.id] || [],
-      group_names: t.group_names || [],
+      group_names: JSON.parse(t.group_names || '[]'),
     }));
     setTeachers(enriched);
     if (cfgRes.data) { setCenterName((cfgRes.data as any).center_name || 'CenterMasr'); setCenterAddress((cfgRes.data as any).address || ''); setCenterPhone((cfgRes.data as any).phone || ''); setCenterLogo((cfgRes.data as any).logo || ''); }
@@ -333,11 +333,11 @@ export default function Classes() {
             ${printHeaderStyle()}
             .content { padding: 8mm 3mm 6mm; }
             h2 { text-align: center; font-size: 14pt; color: #1e3a5f; margin: 0 0 8px; }
-            table { width: 100%; border-collapse: collapse; font-size: 9pt; }
+            table { width: 100%; border-collapse: collapse; font-size: 12pt; }
             th { background: #1e3a5f; color: white; padding: 5px 4px; text-align: center; font-weight: bold; }
             td { padding: 3px 4px; border-bottom: 1px solid #ddd; text-align: center; }
             tr:nth-child(even) { background: #f8f9fa; }
-            .count { text-align: center; font-size: 9pt; color: #666; margin-top: 6px; }
+            .count { text-align: center; font-size: 12pt; color: #666; margin-top: 6px; }
           </style></head><body>
           ${printHeaderHtml({ center_name: centerName, address: centerAddress, phone: centerPhone, logo: centerLogo })}
           <div class="content">
@@ -348,7 +348,7 @@ export default function Classes() {
           </table>
           <div class="count">إجمالي: ${filtered.length} معلمين</div>
           </div>
-          </body></html>`);
+          ${printFooterHtml()}</body></html>`);
           w.document.close();
           setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
         }}

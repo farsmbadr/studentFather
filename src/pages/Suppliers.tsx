@@ -3,7 +3,7 @@ import { Plus, X, Edit2, Trash2, Truck, DollarSign, ShoppingCart, CreditCard, Pe
 import { supabase } from '../supabaseClient';
 import ListTemplate from '../components/ListTemplate';
 import { useToast } from '../components/Toast';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 export default function Suppliers() {
   const { show, confirm } = useToast();
@@ -149,12 +149,12 @@ export default function Suppliers() {
         body{font-family:sans-serif;padding:20px}
         .new-header{text-align:center;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #333}
         .new-header img{height:60px;width:auto;vertical-align:middle;margin-left:10px}
-        .new-header h1{display:inline;font-size:22px;margin:0;vertical-align:middle}
-        .new-header p{font-size:13px;color:#666;margin:5px 0 0}
+        .new-header h1{display:inline;font-size:24pt;margin:0;vertical-align:middle}
+        .new-header p{font-size:14pt;color:#666;margin:5px 0 0}
         table{width:100%;border-collapse:collapse;margin-top:10px}
         th,td{border:1px solid #ccc;padding:8px;text-align:right}
-        th{background:#f5f5f5}td{font-size:14px}
-        .footer{text-align:center;margin-top:20px;padding-top:10px;border-top:1px solid #ccc;font-size:12px;color:#999}
+        th{background:#f5f5f5}td{font-size:16pt}
+        .footer{text-align:center;margin-top:20px;padding-top:10px;border-top:1px solid #ccc;font-size:14pt;color:#999}
       </style></head><body>
       ${printHeaderHtml({ center_name: centerName, address: centerAddress, phone: centerPhone, logo: centerLogo })}
       <h2 style="text-align:center;margin-bottom:15px">قائمة الموردين</h2>
@@ -163,7 +163,7 @@ export default function Suppliers() {
       const balance = calcBalance(s);
       w.document.write(`<tr><td>${i + 1}</td><td>${s.name}</td><td>${s.phone || '—'}</td><td>${s.address || '—'}</td><td>${balance.toFixed(2)}</td><td>${s.notes || '—'}</td></tr>`);
     });
-    w.document.write('</tbody></table><div class="footer">تمت الطباعة عن طريق CenterMasr لإدارة السناتر | 01008667306</div></body></html>');
+    w.document.write(`</tbody></table>${printFooterHtml()}</body></html>`);
     w.document.close();
     setTimeout(() => { w.print(); setTimeout(() => { w.close(); window.focus(); }, 100); }, 200);
   }, [suppliers, txns, centerName, centerAddress, centerPhone, centerLogo]);
@@ -179,18 +179,18 @@ export default function Suppliers() {
       <style>
         ${printHeaderStyle()}
         *{margin:0;padding:0;box-sizing:border-box;font-family:Tahoma,Arial,sans-serif;}
-        body{padding:20px;color:#333;font-size:13px;}
-        .info{display:flex;justify-content:space-between;margin-bottom:15px;padding:10px;background:#f8f8f8;border-radius:6px;font-size:13px;}
+        body{padding:20px;color:#333;font-size:14pt;}
+        .info{display:flex;justify-content:space-between;margin-bottom:15px;padding:10px;background:#f8f8f8;border-radius:6px;font-size:14pt;}
         .info span{color:#555;}
         table{width:100%;border-collapse:collapse;margin-bottom:10px;}
-        th{background:#c0392b;color:#fff;padding:8px 6px;font-size:12px;text-align:center;}
-        td{padding:6px;text-align:center;border-bottom:1px solid #eee;font-size:12px;}
+        th{background:#c0392b;color:#fff;padding:8px 6px;font-size:14pt;text-align:center;}
+        td{padding:6px;text-align:center;border-bottom:1px solid #eee;font-size:14pt;}
         tr:nth-child(even){background:#f9f9f9;}
         .bal{font-weight:bold;color:#c0392b;}
         .positive{color:#27ae60;}
         .negative{color:#c0392b;}
-        .total{background:#fef9e7;font-size:14px;padding:8px;text-align:center;border:1px solid #f9e79f;border-radius:6px;margin-top:10px;}
-        .footer{text-align:center;margin-top:20px;padding-top:10px;border-top:1px solid #ddd;color:#999;font-size:11px;}
+        .total{background:#fef9e7;font-size:16pt;padding:8px;text-align:center;border:1px solid #f9e79f;border-radius:6px;margin-top:10px;}
+        .footer{text-align:center;margin-top:20px;padding-top:10px;border-top:1px solid #ddd;color:#999;font-size:12pt;}
       </style></head><body>
       ${printHeaderHtml({ center_name: centerName, address: centerAddress, phone: centerPhone, logo: centerLogo })}
       <div class="info"><span>المورد: <b>${s.name}</b></span><span>الهاتف: ${s.phone || '—'}</span><span>التاريخ: ${new Date().toLocaleDateString('ar-EG')}</span></div>
@@ -204,7 +204,7 @@ export default function Suppliers() {
       w.document.write(`<tr><td>${i + 1}</td><td>${t.date?.slice(0, 10) || '—'}</td><td>${t.description || t.type}</td><td class="negative">${debit}</td><td class="positive">${credit}</td></tr>`);
     });
     w.document.write(`</tbody></table><div class="total">الرصيد الحالي: <b class="${running >= 0 ? 'positive' : 'negative'}">${running >= 0 ? '+' : ''}${running.toFixed(2)}</b></div>`);
-    w.document.write('<div class="footer">تمت الطباعة عن طريق CenterMasr | 01008667306</div></body></html>');
+    w.document.write(`${printFooterHtml()}</body></html>`);
     w.document.close();
     setTimeout(() => { w.print(); setTimeout(() => { w.close(); window.focus(); }, 100); }, 200);
   };

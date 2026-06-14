@@ -1,22 +1,24 @@
 {
-  "name": "vite-react-typescript-starter",
+  "name": "centermasr",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
+  "description": "CenterMasr ERP - Desktop Application",
+  "bin": "server/index.mjs",
   "scripts": {
     "dev": "vite",
     "server": "node server/index.mjs",
     "start": "concurrently \"npm run server\" \"npm run dev\"",
     "build": "vite build",
+    "build:exe": "npx @yao-pkg/pkg . --output CenterMasrServer.exe",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "migrate": "node scripts/migrate.cjs",
-    "migrate:sqlite": "node scripts/migrate-to-sqlite.cjs",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
-    "icons": "node scripts/generate-icons.cjs"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+  },
+  "pkg": {
+    "targets": ["node22-win-x64"],
+    "assets": ["dist/**/*", "public/**/*"],
+    "outputPath": "dist-exe"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",
@@ -25,14 +27,13 @@
     "jsbarcode": "^3.12.3",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.344.0",
-    "pg": "^8.21.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "recharts": "^3.8.1",
+    "sql.js": "^1.14.1",
     "xlsx": "^0.18.5"
   },
   "devDependencies": {
-    "@tauri-apps/api": "^2.0.0",
     "@types/jsbarcode": "^3.11.4",
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",

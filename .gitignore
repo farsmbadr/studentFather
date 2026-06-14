@@ -21,3 +21,21 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Local SQLite data
+data/
+machine.id
+backups/
+
+# Binary / build artifacts
+CenterMasrServer.exe
+*.exe
+target/
+dist-exe/
+
+# Delivery package
+CenterMasr-Delivery/
+
+# Parent portal
+parent-portal/dist/
+parent-portal/node_modules/

@@ -38,6 +38,7 @@ interface ListTemplateProps<T> {
   onPrint?: () => void;
   onRefresh?: () => void;
   extraButtons?: HeaderButton[];
+  filters?: ReactNode;
 }
 
 export default function ListTemplate<T>({
@@ -55,6 +56,7 @@ export default function ListTemplate<T>({
   onPrint,
   onRefresh,
   extraButtons,
+  filters,
 }: ListTemplateProps<T>) {
   const [sortKey, setSortKey] = useState('');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -130,6 +132,7 @@ export default function ListTemplate<T>({
             <Search size={16} className="absolute right-3 top-3 text-gray-400" />
           </div>
           <div className="flex items-center gap-2 mr-auto">
+            {filters}
             {onAdd && (
               <button onClick={onAdd} className="flex items-center gap-1.5 bg-pink-500 hover:bg-pink-600 text-white text-sm px-4 py-2.5 rounded-xl font-semibold transition-colors">
                 <Plus size={16} /> إضافة

@@ -1,25 +1,26 @@
 {
-  "$schema": "https://raw.githubusercontent.com/nicorevin/tauri-docs/v2/references/config-schema.json",
+  "$schema": "https://raw.githubusercontent.com/nicedoc/tauri/main/core/tauri-config-schema/schema.json",
   "productName": "CenterMasr",
   "version": "1.0.0",
   "identifier": "com.centermasr.app",
   "build": {
-    "beforeDevCommand": "npm run dev",
+    "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
-    "beforeBuildCommand": "npm run build",
-    "frontendDist": "../dist"
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
   },
   "app": {
     "windows": [
       {
-        "title": "CenterMasr",
-        "width": 1400,
-        "height": 900,
-        "minWidth": 1024,
+        "title": "CenterMasr - نظام إدارة السناتر التعليمية",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
         "minHeight": 600,
+        "center": true,
         "resizable": true,
         "fullscreen": false,
-        "center": true
+        "decorations": true
       }
     ],
     "security": {
@@ -34,21 +35,11 @@
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.icns",
-      "icons/icon.ico",
-      "icons/icon.svg"
+      "icons/icon.ico"
     ],
     "windows": {
       "wix": null,
-      "nsis": {
-        "installMode": "currentUser"
-      }
-    }
-  },
-  "plugins": {
-    "sql": {
-      "preload": {
-        "db": "sqlite:data.db"
-      }
+      "nsis": null
     }
   }
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Plus, X, UserCog, Edit2, Trash2, Shield, Lock, Eye, EyeOff, CheckSquare, Square, Save, BookMarked } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useToast } from '../components/Toast';
-import { getCurrentUser } from '../auth';
+import { getCurrentUser, setCurrentUser } from '../auth';
 
 interface AppUser {
   id: string;
@@ -25,9 +25,10 @@ interface CustomRole {
   created_at: string;
 }
 
-const builtInRoles = ['مدير', 'محاسب', 'مدرس', 'إدارى', 'استقبال'];
+const builtInRoles = ['Manager', 'محاسب', 'مدرس', 'إدارى', 'استقبال'];
 
 const rolePermissions: Record<string, string[]> = {
+  'Manager': ['dashboard', 'students', 'student-report', 'archive', 'absence', 'absence-reports', 'absence-latest', 'absence-warnings', 'absence-sheet', 'exam-list', 'exam-top-scorers', 'exam-group-report', 'exam-score-sheet', 'exam-statistics', 'exam-essay-grading', 'question-bank', 'book-list', 'book-profits', 'book-delivery', 'supplier-list', 'publications', 'daily-report', 'revenues', 'deposits-report', 'revenue-archive', 'late-payers', 'group-fees', 'expenses', 'expense-archive', 'monthly-stats', 'finance-report', 'basic-data', 'subjects', 'grades', 'classes', 'groups', 'notifications', 'parent-messages'],
   'مدير': ['all'],
   'محاسب': ['daily-report', 'revenues', 'deposits-report', 'revenue-archive', 'late-payers', 'group-fees', 'expenses', 'expense-archive', 'monthly-stats', 'finance-report'],
   'مدرس': ['students', 'student-report', 'absence', 'absence-reports', 'absence-latest', 'absence-warnings', 'absence-sheet', 'exam-list', 'exam-top-scorers', 'exam-group-report', 'exam-score-sheet', 'exam-statistics', 'exam-essay-grading', 'question-bank', 'subjects', 'groups', 'notifications', 'publications'],
@@ -52,22 +53,19 @@ const permGroups = [
     { key: 'daily-report', label: 'التقرير اليومى' }, { key: 'revenues', label: 'الإيرادات' }, { key: 'deposits-report', label: 'مقدمات الحجز' }, { key: 'revenue-archive', label: 'أرشيف الإيرادات' }, { key: 'late-payers', label: 'المتخلفون عن الدفع' }, { key: 'group-fees', label: 'تحديد المصروفات' }, { key: 'expenses', label: 'المصروفات والإهلاكات' }, { key: 'expense-archive', label: 'أرشيف المصروفات' }, { key: 'monthly-stats', label: 'إحصائيات الشهر' }, { key: 'finance-report', label: 'إجماليات ونسب' },
   ] },
   { label: 'الإدارة الرئيسية', icon: '⚙️', perms: [
-    { key: 'basic-data', label: 'بيانات السنتر' }, { key: 'subjects', label: 'المواد' }, { key: 'classes', label: 'المعلمين' }, { key: 'groups', label: 'المجموعات' }, { key: 'notifications', label: 'الإشعارات' }, { key: 'settings', label: 'الإعدادات' }, { key: 'users', label: 'المستخدمين' }, { key: 'login-log', label: 'سجلات الدخول' },
+    { key: 'basic-data', label: 'بيانات السنتر' }, { key: 'subjects', label: 'المواد' }, { key: 'classes', label: 'المعلمين' }, { key: 'groups', label: 'المجموعات' }, { key: 'notifications', label: 'الإشعارات' }, { key: 'parent-messages', label: 'إشعارات أولياء الأمور' }, { key: 'settings', label: 'الإعدادات' }, { key: 'users', label: 'المستخدمين' }, { key: 'login-log', label: 'سجلات الدخول' },
   ] },
 ];
 
 function UserModal({ onClose, onSave, initial, isSuperAdmin, customRoles, onRoleSaved }: { onClose: () => void; onSave: (d: any) => void; initial?: AppUser; isSuperAdmin: boolean; customRoles: CustomRole[]; onRoleSaved?: () => void }) {
   const { show } = useToast();
-  const [form, setForm] = useState({ name: initial?.name || '', username: initial?.username || '', role: initial?.role || 'موظف', status: initial?.status || 'active', phone: initial?.phone || '', permissions: initial?.permissions || [], password: '' });
+  const [form, setForm] = useState({ name: initial?.name || '', username: initial?.username || '', role: initial?.role || 'Manager', status: initial?.status || 'active', phone: initial?.phone || '', permissions: initial?.permissions || [], password: '' });
   const [showPass, setShowPass] = useState(false);
   const [savingRole, setSavingRole] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
 
   const isCustomRole = (r: string) => customRoles.some(c => c.name === r);
   const customRoleNames = customRoles.map(c => c.name);
-
-  // All options for the role dropdown
-  const allRoleOptions = [...builtInRoles, ...customRoleNames, 'مخصص'];
 
   useEffect(() => {
     if (builtInRoles.includes(form.role)) {
@@ -126,7 +124,12 @@ function UserModal({ onClose, onSave, initial, isSuperAdmin, customRoles, onRole
             ))}
             <div>
               <label className="text-xs text-gray-500 mb-1 block">الدور الوظيفي</label>
-              <select value={form.role} onChange={e => set('role', e.target.value)} disabled={initial?.is_super_admin || (initial?.role === 'مدير' && !isSuperAdmin)} className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${initial?.is_super_admin || (initial?.role === 'مدير' && !isSuperAdmin) ? 'bg-gray-100 cursor-not-allowed' : ''}`}>
+              {initial?.is_super_admin ? (
+                <div className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-gray-100 text-gray-500">
+                  المدير السوبر
+                </div>
+              ) : (
+              <select value={form.role} onChange={e => set('role', e.target.value)} disabled={initial?.role === 'مدير' && !isSuperAdmin} className={`w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-gray-400 ${initial?.role === 'مدير' && !isSuperAdmin ? 'bg-gray-100 cursor-not-allowed' : ''}`}>
                 <optgroup label="الأدوار الأساسية">
                   {builtInRoles.map(r => <option key={r} value={r}>{r}</option>)}
                 </optgroup>
@@ -137,6 +140,7 @@ function UserModal({ onClose, onSave, initial, isSuperAdmin, customRoles, onRole
                 )}
                 <option value="مخصص">─── مخصص ───</option>
               </select>
+              )}
             </div>
             <div>
               <label className="text-xs text-gray-500 mb-1 block">الحالة</label>
@@ -333,7 +337,7 @@ export default function Users() {
   const [showRolesManager, setShowRolesManager] = useState(false);
   const currentUser = getCurrentUser();
   const currentUserData = users.find(u => u.id === currentUser.id);
-  const isSuperAdmin = currentUserData?.is_super_admin || false;
+  const isSuperAdmin = currentUser.is_super_admin ?? currentUserData?.is_super_admin ?? false;
 
   const loadRoles = async () => {
     const { data } = await supabase.from('custom_roles').select('*').order('created_at', { ascending: false });
@@ -353,15 +357,21 @@ export default function Users() {
     if (editing && editing.id !== currentUser.id && !isSuperAdmin) return show('فقط المدير السوبر يمكنه تعديل المستخدمين الآخرين', 'error');
     if (editing?.is_super_admin && form.status === 'inactive') return show('لا يمكن تعطيل المدير السوبر', 'error');
     if (editing?.role === 'مدير' && !isSuperAdmin && form.status === 'inactive') return show('لا يمكنك تعطيل مدير آخر', 'error');
+    if (form.role === 'مدير') return show('لا يمكن إنشاء أو تعديل مستخدم بصلاحيات مدير', 'error');
     const { password, permissions, ...rest } = form;
     const payload: any = { ...rest, permissions: JSON.stringify(permissions) };
-    if (editing) await supabase.from('app_users').update(payload).eq('id', editing.id);
-    else await supabase.from('app_users').insert({ ...payload, password: password || '1234' });
+    if (editing) {
+      await supabase.from('app_users').update(payload).eq('id', editing.id);
+      if (editing.id === currentUser.id && currentUserData) {
+        const updated = { ...currentUser, name: payload.name, username: payload.username, role: payload.role, permissions, is_super_admin: true };
+        setCurrentUser(updated);
+      }
+    } else await supabase.from('app_users').insert({ ...payload, password: password || '1234' });
     show(editing ? 'تم تعديل المستخدم' : 'تم إضافة المستخدم');
     setShowModal(false); setEditing(undefined); load();
   };
 
-  const remove = async (id: string, targetRole: string) => {
+  const remove = async (id: string) => {
     const target = users.find(u => u.id === id);
     if (target?.is_super_admin) return show('لا يمكن حذف المدير السوبر', 'error');
     if (!isSuperAdmin) return show('فقط المدير السوبر يمكنه حذف المستخدمين', 'error');
@@ -372,21 +382,7 @@ export default function Users() {
     load();
   };
 
-  const resetPassword = async (u: AppUser) => {
-    const ok = await confirm(`إعادة تعيين كلمة المرور لـ ${u.name}؟\nستصبح كلمة المرور آخر 4 أرقام من هاتفه`);
-    if (!ok) return;
-    try {
-      const r = await fetch('/api/reset-password', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: u.id, requestedBy: currentUser.id })
-      });
-      const d = await r.json();
-      if (!r.ok) return show(d.error || 'فشل إعادة التعيين', 'error');
-      show(`تم إعادة تعيين كلمة المرور: ${d.newPassword}`);
-    } catch { show('حدث خطأ', 'error'); }
-  };
-
-  const roleColors: Record<string, string> = { مدير: 'bg-pink-100 text-pink-700', محاسب: 'bg-green-100 text-green-700', مدرس: 'bg-blue-100 text-blue-700', إدارى: 'bg-purple-100 text-purple-700', استقبال: 'bg-amber-100 text-amber-700', مخصص: 'bg-gray-100 text-gray-700' };
+  const roleColors: Record<string, string> = { Manager: 'bg-indigo-100 text-indigo-700', مدير: 'bg-pink-100 text-pink-700', محاسب: 'bg-green-100 text-green-700', مدرس: 'bg-blue-100 text-blue-700', إدارى: 'bg-purple-100 text-purple-700', استقبال: 'bg-amber-100 text-amber-700', مخصص: 'bg-gray-100 text-gray-700' };
 
   return (
     <div className="fade-in space-y-4">
@@ -422,7 +418,7 @@ export default function Users() {
                     {(isSuperAdmin || u.id === currentUser.id) && (
                     <button onClick={() => { setEditing(u); setShowModal(true); }} className="p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg" title="تعديل"><Edit2 size={13} /></button>
                     )}
-                    <button onClick={() => remove(u.id, u.role)} className={`p-1.5 rounded-lg ${u.is_super_admin || !isSuperAdmin ? 'text-gray-200 cursor-not-allowed' : 'text-red-400 hover:bg-red-50'}`} title={u.is_super_admin ? 'لا يمكن حذف المدير السوبر' : !isSuperAdmin ? 'فقط المدير السوبر يمكنه الحذف' : 'حذف'}><Trash2 size={13} /></button>
+                    <button onClick={() => remove(u.id)} className={`p-1.5 rounded-lg ${u.is_super_admin || !isSuperAdmin ? 'text-gray-200 cursor-not-allowed' : 'text-red-400 hover:bg-red-50'}`} title={u.is_super_admin ? 'لا يمكن حذف المدير السوبر' : !isSuperAdmin ? 'فقط المدير السوبر يمكنه الحذف' : 'حذف'}><Trash2 size={13} /></button>
                   </div>
                 </div>
                 <p className="font-bold text-gray-800 text-sm">{u.name}</p>
@@ -431,14 +427,9 @@ export default function Users() {
                   <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${roleColors[u.role] || 'bg-gray-100 text-gray-600'}`}>{u.role}</span>
                   <span className={`text-xs px-2 py-0.5 rounded-full ${u.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>{u.status === 'active' ? 'نشط' : 'غير نشط'}</span>
                 </div>
-                {(isSuperAdmin || u.id === currentUser.id) && (
+                {(u.id === currentUser.id) && (
                   <button onClick={() => setPasswordUser(u)} className="flex items-center gap-1.5 w-full justify-center border border-gray-200 hover:bg-gray-50 text-gray-600 text-xs font-semibold px-3 py-2 rounded-xl transition-colors">
                     <Lock size={12} /> تغيير كلمة المرور
-                  </button>
-                )}
-                {isSuperAdmin && !u.is_super_admin && (
-                  <button onClick={() => resetPassword(u)} className="flex items-center gap-1.5 w-full justify-center border border-amber-200 hover:bg-amber-50 text-amber-700 text-xs font-semibold px-3 py-2 rounded-xl transition-colors mt-2">
-                    <Lock size={12} /> إعادة تعيين كلمة المرور
                   </button>
                 )}
               </div>

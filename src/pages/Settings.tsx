@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Download, Upload, Trash2, AlertTriangle, Shield, Server, Phone, User, Calendar, Clock, CheckCircle, XCircle, Info, Settings as SettingsIcon } from 'lucide-react';
+import { Download, Upload, Trash2, AlertTriangle, Shield, Server, Phone, User, Calendar, Clock, CheckCircle, XCircle, Info, Settings as SettingsIcon, Cloud, Globe } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useToast } from '../components/Toast';
 
@@ -18,10 +18,61 @@ export default function Settings() {
   const [activateError, setActivateError] = useState(false);
   const licenseTextareaRef = useRef<HTMLTextAreaElement>(null);
 
+  const [supabaseUrl, setSupabaseUrl] = useState('');
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
+  const [supabaseConfigured, setSupabaseConfigured] = useState(false);
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<any>(null);
+
   useEffect(() => {
     fetch('/api/machine-id').then(r => r.json()).then(d => setMachineId(d.machineId)).catch(() => setMachineId('غير معروف'));
     checkLicense();
+    loadSupabaseConfig();
   }, []);
+
+  const loadSupabaseConfig = async () => {
+    try {
+      const r = await fetch('/api/sync-config');
+      if (r.ok) {
+        const d = await r.json();
+        if (d.configured) {
+          setSupabaseUrl(d.url || '');
+          setSupabaseAnonKey(d.anonKey || '');
+          setSupabaseConfigured(true);
+        }
+      }
+    } catch {}
+  };
+
+  const saveSupabaseConfig = async () => {
+    if (!supabaseUrl.trim() || !supabaseAnonKey.trim()) return show('الرجاء إدخال الرابط والمفتاح', 'error');
+    try {
+      const r = await fetch('/api/sync-config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: supabaseUrl.trim(), anonKey: supabaseAnonKey.trim() }),
+      });
+      if (!r.ok) throw new Error();
+      setSupabaseConfigured(true);
+      show('تم حفظ إعدادات Supabase');
+    } catch { show('فشل حفظ الإعدادات', 'error'); }
+  };
+
+  const handleSyncToCloud = async () => {
+    if (!supabaseConfigured) return show('قم بإعداد Supabase أولاً', 'error');
+    const ok = await confirm('سيتم رفع جميع بيانات البوابات إلى السحابة. هل أنت متأكد؟');
+    if (!ok) return;
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const r = await fetch('/api/sync-to-supabase', { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      setSyncResult(d);
+      show('تمت المزامنة بنجاح');
+    } catch (e: any) { show('فشلت المزامنة: ' + e.message, 'error'); }
+    setSyncing(false);
+  };
 
   const checkLicense = async () => {
     try {
@@ -79,9 +130,9 @@ export default function Settings() {
         const text = await file.text();
         const data = JSON.parse(text);
         const r = await fetch('/api/restore', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ data, confirm: true }) });
-        if (!r.ok) throw new Error();
+        if (!r.ok) { const e = await r.json(); throw new Error(e.error || e.message || 'خطأ غير معروف'); }
         show('تم استعادة البيانات بنجاح');
-      } catch { show('فشل الاستعادة — تأكد من صحة الملف', 'error'); }
+      } catch (e: any) { show('فشل الاستعادة: ' + (e.message || 'تأكد من صحة الملف'), 'error'); }
       setRestoring(false);
     };
     input.click();
@@ -245,6 +296,83 @@ export default function Settings() {
               <span>|</span>
               <span>جميع الحقوق محفوظة &copy; 2026</span>
             </div>
+          </div>
+        </div>
+
+        {/* ── Portal URLs ── */}
+        <div className="bg-white rounded-2xl shadow p-5">
+          <div className="flex items-center gap-2 mb-5">
+            <Info size={18} className="text-blue-500" />
+            <h3 className="font-bold text-gray-800">روابط البوابات الإلكترونية</h3>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">بوابة ولي الأمر — يدخل ولي الأمر بكود الطالب + هاتف ولي الأمر</p>
+              <div className="flex items-center gap-2">
+                <input type="text" readOnly value={window.location.origin + '/parent'} className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono focus:outline-none ltr text-left" />
+                <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/parent'); show('تم نسخ رابط ولي الأمر', 'success'); }}
+                  className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-4 py-2 rounded-xl transition-colors shrink-0">
+                  نسخ
+                </button>
+              </div>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1.5">بوابة الطالب — يدخل الطالب بكود الطالب + رقم هاتفه الشخصي</p>
+              <div className="flex items-center gap-2">
+                <input type="text" readOnly value={window.location.origin + '/student'} className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono focus:outline-none ltr text-left" />
+                <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/student'); show('تم نسخ رابط الطالب', 'success'); }}
+                  className="bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-4 py-2 rounded-xl transition-colors shrink-0">
+                  نسخ
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ── Sync to Cloud (Supabase) ── */}
+        <div className="bg-white rounded-2xl shadow p-5">
+          <div className="flex items-center gap-2 mb-5">
+            <Cloud size={18} className="text-sky-500" />
+            <h3 className="font-bold text-gray-800">المزامنة مع السحابة (Supabase)</h3>
+          </div>
+          <p className="text-xs text-gray-500 mb-4">ارفع بيانات الطلاب والمدفوعات والامتحانات إلى Supabase لتشغيل بوابات أولياء الأمور والطلاب على موقع منفصل</p>
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Supabase Project URL</label>
+              <input type="url" value={supabaseUrl} onChange={e => setSupabaseUrl(e.target.value)}
+                placeholder="https://your-project.supabase.co"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 ltr text-left focus:outline-none focus:ring-2 focus:ring-sky-400" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Supabase Anon Key</label>
+              <input type="text" value={supabaseAnonKey} onChange={e => setSupabaseAnonKey(e.target.value)}
+                placeholder="eyJhbGciOiJIUzI1NiIs..."
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono ltr text-left focus:outline-none focus:ring-2 focus:ring-sky-400" />
+            </div>
+            <button onClick={saveSupabaseConfig}
+              className="flex items-center gap-2 bg-sky-500 hover:bg-sky-600 text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition-colors">
+              <Globe size={16} /> حفظ الإعدادات
+            </button>
+            {supabaseConfigured && (
+              <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-2 rounded-xl">
+                <CheckCircle size={14} /> تم إعداد الاتصال
+              </div>
+            )}
+            <button onClick={handleSyncToCloud} disabled={syncing || !supabaseConfigured}
+              className="flex items-center gap-2 w-full bg-gradient-to-l from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 text-white text-sm font-bold px-5 py-3 rounded-xl transition-all shadow-md shadow-emerald-200">
+              <Cloud size={18} /> {syncing ? 'جاري المزامنة...' : '🔵 مزامنة البيانات إلى السحابة الآن'}
+            </button>
+            {syncResult && (
+              <div className="bg-gray-50 rounded-xl p-3 text-xs text-gray-600 font-mono max-h-40 overflow-y-auto">
+                {Object.entries(syncResult.results || {}).map(([table, info]: [string, any]) => (
+                  <div key={table} className="flex items-center gap-2 py-0.5">
+                    {info.status === 'ok' ? <span className="text-green-500">✓</span> : <span className="text-red-500">✗</span>}
+                    <span>{table}: {info.count} سجلات</span>
+                    {info.error && <span className="text-red-500">({info.error})</span>}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

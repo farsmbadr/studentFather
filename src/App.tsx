@@ -44,11 +44,16 @@ import MonthlyStats from './pages/MonthlyStats';
 import FinanceReport from './pages/FinanceReport';
 import GroupFees from './pages/GroupFees';
 import Grades from './pages/Grades';
+import ParentMessages from './pages/ParentMessages';
 import Login from './pages/Login';
 import { Page, StudentAction } from './types';
 import { ToastProvider } from './components/Toast';
 import StudentProfile from './pages/StudentProfile';
 import TakeExam from './pages/TakeExam';
+import ParentLogin from './pages/ParentLogin';
+import ParentDashboard from './pages/ParentDashboard';
+import StudentLogin from './pages/StudentLogin';
+import StudentDashboard from './pages/StudentDashboard';
 import { supabase } from './supabaseClient';
 import { XCircle } from 'lucide-react';
 import { getCurrentUser, setCurrentUser } from './auth';
@@ -106,6 +111,7 @@ function PageContent({ page, studentId, onBack, onEditStudent, onDeleteStudent, 
     case 'finance-report': return <FinanceReport />;
     case 'group-fees': return <GroupFees />;
     case 'grades': return <Grades />;
+    case 'parent-messages': return <ParentMessages />;
     default: return <Dashboard />;
   }
 }
@@ -115,13 +121,37 @@ export default function App() {
   const [loggedIn, setLoggedIn] = useState(() => !!getCurrentUser().id);
   const [user, setUser] = useState(() => getCurrentUser());
   const perms = user.permissions || [];
-  const hasAccess = (page: Page) => perms.includes('all') || perms.includes(page);
+  const hasAccess = (page: Page) => user.is_super_admin || perms.includes('all') || perms.includes(page);
   const navigate = (page: Page) => { if (hasAccess(page)) { setCurrentPage(page); } };
   const handleLogin = (u: { id: string; name: string; username: string; role: string; permissions: string[]; is_super_admin?: boolean }) => {
     setCurrentUser(u); setLoggedIn(true); setUser(u);
   };
   const handleLogout = () => {
     localStorage.removeItem('baderp-user'); setLoggedIn(false); setUser({ id: '', name: '', username: '', role: '', permissions: [] }); setCurrentPage('dashboard');
+  };
+  const handleParentLogin = (token: string, student: any) => {
+    localStorage.setItem('baderp-parent-token', token);
+    localStorage.setItem('baderp-parent-student', JSON.stringify(student));
+    setParentToken(token);
+    setParentStudent(student);
+  };
+  const handleParentLogout = () => {
+    localStorage.removeItem('baderp-parent-token');
+    localStorage.removeItem('baderp-parent-student');
+    setParentToken('');
+    setParentStudent(null);
+  };
+  const handleStudentPortalLogin = (token: string, student: any) => {
+    localStorage.setItem('baderp-student-token', token);
+    localStorage.setItem('baderp-student-student', JSON.stringify(student));
+    setStudentPortalToken(token);
+    setStudentPortalStudent(student);
+  };
+  const handleStudentPortalLogout = () => {
+    localStorage.removeItem('baderp-student-token');
+    localStorage.removeItem('baderp-student-student');
+    setStudentPortalToken('');
+    setStudentPortalStudent(null);
   };
   const [beforeProfilePage, setBeforeProfilePage] = useState<Page | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -136,12 +166,28 @@ export default function App() {
 
   const [isTakeExam, setIsTakeExam] = useState(() => /\/take-exam\//.test(window.location.pathname));
 
+  const [isParent, setIsParent] = useState(() => /\/parent\b/.test(window.location.pathname));
+  const [parentToken, setParentToken] = useState(() => localStorage.getItem('baderp-parent-token') || '');
+  const [parentStudent, setParentStudent] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('baderp-parent-student') || 'null'); } catch { return null; }
+  });
+
+  const [isStudent, setIsStudent] = useState(() => /\/student\b/.test(window.location.pathname));
+  const [studentPortalToken, setStudentPortalToken] = useState(() => localStorage.getItem('baderp-student-token') || '');
+  const [studentPortalStudent, setStudentPortalStudent] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('baderp-student-student') || 'null'); } catch { return null; }
+  });
+
   useEffect(() => {
     fetch('/api/check-license').then(r => r.json()).then(d => setLicenseValid(d.valid)).catch(() => setLicenseValid(true));
   }, []);
 
   useEffect(() => {
-    const handler = () => setIsTakeExam(/\/take-exam\//.test(window.location.pathname));
+    const handler = () => {
+      setIsTakeExam(/\/take-exam\//.test(window.location.pathname));
+      setIsParent(/\/parent\b/.test(window.location.pathname));
+      setIsStudent(/\/student\b/.test(window.location.pathname));
+    };
     window.addEventListener('popstate', handler);
     return () => window.removeEventListener('popstate', handler);
   }, []);
@@ -160,6 +206,22 @@ export default function App() {
   useEffect(() => { setStudentAction('list'); }, [currentPage]);
 
   const toggleTheme = () => setIsDark(prev => !prev);
+
+  if (isParent) {
+    return parentToken && parentStudent ? (
+      <ParentDashboard token={parentToken} studentInfo={parentStudent} onLogout={() => { handleParentLogout(); window.location.href = '/parent'; }} />
+    ) : (
+      <ParentLogin onLogin={handleParentLogin} />
+    );
+  }
+
+  if (isStudent) {
+    return studentPortalToken && studentPortalStudent ? (
+      <StudentDashboard token={studentPortalToken} studentInfo={studentPortalStudent} onLogout={() => { handleStudentPortalLogout(); window.location.href = '/student'; }} />
+    ) : (
+      <StudentLogin onLogin={handleStudentPortalLogin} />
+    );
+  }
 
   if (!loggedIn) return <Login onLogin={handleLogin} />;
 

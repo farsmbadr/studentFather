@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Plus, Search, Edit2, Trash2, ChevronDown, ChevronUp, X, BookOpen } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, ChevronDown, ChevronUp, X, BookOpen, Printer } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useToast } from '../components/Toast';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 const DIFFICULTY_COLORS: Record<string, string> = {
   سهل: 'bg-emerald-100 text-emerald-700',
@@ -24,6 +25,10 @@ export default function QuestionBank() {
   const [filterType, setFilterType] = useState('');
   const [filterDifficulty, setFilterDifficulty] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [centerName, setCenterName] = useState('CenterMasr');
+  const [centerAddr, setCenterAddr] = useState('');
+  const [centerPhone, setCenterPhone] = useState('');
+  const [centerLogo, setCenterLogo] = useState('');
 
   const [showForm, setShowForm] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
@@ -37,12 +42,14 @@ export default function QuestionBank() {
 
   const load = async () => {
     setLoading(true);
-    const [qRes, sRes] = await Promise.all([
+    const [qRes, sRes, cfg] = await Promise.all([
       supabase.from('questions').select('*').order('created_at', { ascending: false }),
       supabase.from('subjects').select('id, name').order('name'),
+      supabase.from('center_config').select('center_name,address,phone,logo').maybeSingle(),
     ]);
     setQuestions(qRes.data || []);
     setSubjects(sRes.data || []);
+    if (cfg.data) { setCenterName(cfg.data.center_name || 'CenterMasr'); setCenterAddr(cfg.data.address || ''); setCenterPhone(cfg.data.phone || ''); setCenterLogo(cfg.data.logo || ''); }
     setLoading(false);
   };
 
@@ -104,17 +111,61 @@ export default function QuestionBank() {
 
   const getOptionLabel = (i: number) => String.fromCharCode(65 + i);
 
+  const handlePrint = () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const rows = filtered.map((q, i) => `
+      <tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:bold">${q.question_text}</td>
+        <td>${getSubjectName(q.subject_id)}</td>
+        <td>${q.question_type}</td>
+        <td>${q.difficulty || '—'}</td>
+        <td>${q.correct_answer || '—'}</td>
+      </tr>`).join('');
+    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>بنك الأسئلة</title>
+      <style>
+        @page { size: landscape; margin: 5mm; }
+        * { font-family: 'Traditional Arabic', 'Arabic Typesetting', Arial, sans-serif; }
+        body { margin: 0; padding: 0; }
+        ${printHeaderStyle()}
+        .content { padding: 6mm 3mm; }
+        h2 { text-align: center; font-size: 14pt; color: #1e3a5f; margin: 0 0 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12pt; }
+        th { background: #1e3a5f; color: white; padding: 5px 3px; text-align: center; font-weight: bold; }
+        td { padding: 3px 3px; border-bottom: 1px solid #ddd; text-align: center; }
+        tr:nth-child(even) { background: #f8f9fa; }
+      </style></head><body>
+      ${printHeaderHtml({ center_name: centerName, address: centerAddr, phone: centerPhone, logo: centerLogo })}
+      <div class="content">
+      <h2>بنك الأسئلة</h2>
+      <table>
+        <thead><tr><th>#</th><th>السؤال</th><th>المادة</th><th>النوع</th><th>المستوى</th><th>الإجابة</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </div>
+      ${printFooterHtml()}</body></html>`);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
+  };
+
   return (
     <div className="fade-in space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
           <BookOpen size={20} className="text-violet-500" /> بنك الأسئلة
         </h2>
-        <button onClick={() => { resetForm(); setShowForm(true); }}
+        <div className="flex items-center gap-2">
+          <button onClick={handlePrint}
+            className="px-3 py-2 text-sm bg-violet-100 text-violet-700 rounded-lg hover:bg-violet-200 transition-colors flex items-center gap-1.5">
+            <Printer size={14} /> طباعة
+          </button>
+          <button onClick={() => { resetForm(); setShowForm(true); }}
           className="px-4 py-2 bg-violet-500 text-white rounded-lg text-sm font-semibold hover:bg-violet-600 transition-colors flex items-center gap-2">
           <Plus size={16} /> إضافة سؤال
-        </button>
-      </div>
+          </button>
+          </div>
+        </div>
 
       {/* Filters */}
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 flex-wrap">

@@ -1,6 +1,1 @@
-﻿{
-    "machine_id":  "031eb8ac5c832a46b73da7c594dc502d401cb1062070347c80e1a8445043ad5c",
-    "expires_at":  "2026-09-10T01:48:03.135Z",
-    "sig":  "1d05d5b0be696a8d6d805e5454830bfae7a43909d0d15586c27b6a98d5e7036f",
-    "activated_at":  "2026-06-12T01:48:03.135Z"
-}
+{"machine_id":"c487de8b8e6b9e21c6f85d38077f90348fc731c82b62451e9d754b5811619edc","activated_at":"2026-06-12T22:39:20.119Z","expires_at":"2027-06-12T22:39:20.120Z","sig":"b5a6ed3bde6f278b81aef31fa4ced41d9711ebd95247e0cd56bea36ea9a76879"}

@@ -1,7 +1,7 @@
 import { Printer, Download, Eye, Users, GraduationCap, BookOpen, DollarSign, Truck, CreditCard, BarChart3, ClipboardList } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
-import { printHeaderHtml, printHeaderStyle } from '../utils/printHeader';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 const openPrintWindow = (title: string, headers: string[], rows: string[][], centerConfig: { name: string; address: string; phone: string; logo: string }) => {
   const w = window.open('', '_blank');
@@ -15,8 +15,8 @@ const openPrintWindow = (title: string, headers: string[], rows: string[][], cen
       .content { padding: 6mm 5mm; }
       h2 { text-align: center; font-size: 14pt; color: #1e3a5f; margin: 0 0 8px; }
       table { width: 100%; border-collapse: collapse; margin-top: 6px; }
-      th { background: #1e3a5f; color: white; padding: 5px 6px; text-align: center; font-weight: bold; font-size: 9pt; }
-      td { padding: 4px 6px; text-align: center; border-bottom: 1px solid #ddd; font-size: 8.5pt; }
+      th { background: #1e3a5f; color: white; padding: 5px 6px; text-align: center; font-weight: bold; font-size: 12pt; }
+      td { padding: 4px 6px; text-align: center; border-bottom: 1px solid #ddd; font-size: 12pt; }
       tr:nth-child(even) td { background: #f8f9fa; }
     </style></head><body>
     ${printHeaderHtml({ center_name: centerConfig.name, address: centerConfig.address, phone: centerConfig.phone, logo: centerConfig.logo })}
@@ -26,7 +26,7 @@ const openPrintWindow = (title: string, headers: string[], rows: string[][], cen
     ${rows.map(r => `<tr>${r.map(v => `<td>${v ?? ''}</td>`).join('')}</tr>`).join('')}
     </tbody></table>
     </div>
-    </body></html>`);
+    ${printFooterHtml()}</body></html>`);
   w.document.close();
   setTimeout(() => { w.print(); setTimeout(() => { w.close(); window.focus(); }, 100); }, 200);
 };

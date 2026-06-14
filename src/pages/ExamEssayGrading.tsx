@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ClipboardList, CheckCircle } from 'lucide-react';
+import { ClipboardList, CheckCircle, Printer } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useToast } from '../components/Toast';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 export default function ExamEssayGrading() {
   const { show } = useToast();
@@ -17,16 +18,21 @@ export default function ExamEssayGrading() {
   const [groups, setGroups] = useState<string[]>([]);
   const [essayScores, setEssayScores] = useState<Record<string, Record<string, string>>>({});
   const [saving, setSaving] = useState(false);
+  const [centerName, setCenterName] = useState('CenterMasr');
+  const [centerAddr, setCenterAddr] = useState('');
+  const [centerPhone, setCenterPhone] = useState('');
+  const [centerLogo, setCenterLogo] = useState('');
 
   const load = async () => {
     setLoading(true);
-    const [exRes, qRes, rRes, sRes, subRes, eqRes] = await Promise.all([
+    const [exRes, qRes, rRes, sRes, subRes, eqRes, cfg] = await Promise.all([
       supabase.from('exams').select('*').order('date', { ascending: false }),
       supabase.from('questions').select('*'),
       supabase.from('exam_results').select('*'),
       supabase.from('students').select('id,name,group_name').eq('status', 'active'),
       supabase.from('subjects').select('*'),
       supabase.from('exam_questions').select('*'),
+      supabase.from('center_config').select('center_name,address,phone,logo').maybeSingle(),
     ]);
     setExams(exRes.data || []);
     setAllQuestions(qRes.data || []);
@@ -34,6 +40,7 @@ export default function ExamEssayGrading() {
     setStudents(sRes.data || []);
     setAllSubjects(subRes.data || []);
     setExamQuestions(eqRes.data || []);
+    if (cfg.data) { setCenterName(cfg.data.center_name || 'CenterMasr'); setCenterAddr(cfg.data.address || ''); setCenterPhone(cfg.data.phone || ''); setCenterLogo(cfg.data.logo || ''); }
     const gs = [...new Set((sRes.data || []).map((s: any) => s.group_name).filter(Boolean))] as string[];
     setGroups(gs);
     setLoading(false);
@@ -44,13 +51,11 @@ export default function ExamEssayGrading() {
   const exam = exams.find(e => e.id === selectedExamId);
   const examResults = allResults.filter(r => r.exam_title === exam?.title);
 
-  // Find essay questions linked to this exam
   const examQIds = exam ? new Set(examQuestions.filter(eq => eq.exam_id === selectedExamId).map(eq => eq.question_id)) : new Set();
   const essayQuestions = exam
     ? allQuestions.filter(q => q.question_type === 'مقالي' && examQIds.has(q.id))
     : [];
 
-  // Students in the exam (who have results) filtered by group
   const examStudentIds = examResults.map(r => r.student_id);
   const filteredStudents = students.filter(s =>
     examStudentIds.includes(s.id) && (!selectedGroup || s.group_name === selectedGroup)
@@ -103,11 +108,79 @@ export default function ExamEssayGrading() {
     setSaving(false);
   };
 
+  const handlePrint = () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const rows = filteredStudents.map((student, i) => {
+      const result = examResults.find(r => r.student_id === student.id);
+      const autoScore = result ? getAutoScore(result) : 0;
+      const existingScores = result?.essay_scores;
+      const essayCols = essayQuestions.map(q => {
+        let val = '';
+        if (existingScores) {
+          const es = typeof existingScores === 'string' ? JSON.parse(existingScores) : existingScores;
+          val = es[q.id] !== undefined ? String(es[q.id]) : '';
+        }
+        return val || '—';
+      }).join('</td><td class="text-center">');
+      const totals = essayQuestions.reduce((s, q) => {
+        if (existingScores) {
+          const es = typeof existingScores === 'string' ? JSON.parse(existingScores) : existingScores;
+          return s + (Number(es[q.id]) || 0);
+        }
+        return s;
+      }, 0);
+      const finalScore = autoScore + totals;
+      return `<tr>
+        <td>${i + 1}</td>
+        <td style="font-weight:bold">${student.name}</td>
+        <td>${student.group_name || '—'}</td>
+        <td class="text-center">${autoScore}</td>
+        <td class="text-center">${essayCols}</td>
+        <td class="text-center"><strong>${finalScore}</strong></td>
+      </tr>`;
+    }).join('');
+    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>تصحيح مقالي - ${exam?.title}</title>
+      <style>
+        @page { size: landscape; margin: 5mm; }
+        * { font-family: 'Traditional Arabic', 'Arabic Typesetting', Arial, sans-serif; }
+        body { margin: 0; padding: 0; }
+        ${printHeaderStyle()}
+        .content { padding: 6mm 3mm; }
+        h2 { text-align: center; font-size: 14pt; color: #1e3a5f; margin: 0 0 4px; }
+        .sub { text-align: center; font-size: 12pt; color: #666; margin: 0 0 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12pt; }
+        th { background: #1e3a5f; color: white; padding: 5px 3px; text-align: center; font-weight: bold; }
+        td { padding: 3px 3px; border-bottom: 1px solid #ddd; }
+        tr:nth-child(even) { background: #f8f9fa; }
+      </style></head><body>
+      ${printHeaderHtml({ center_name: centerName, address: centerAddr, phone: centerPhone, logo: centerLogo })}
+      <div class="content">
+      <h2>تصحيح الأسئلة المقالية</h2>
+      <p class="sub">${exam?.title} — ${exam?.subject}</p>
+      <table>
+        <thead><tr><th>#</th><th>الطالب</th><th>المجموعة</th><th>آلي</th>${essayQuestions.map(q => `<th>${q.question_text.slice(0, 30)}</th>`).join('')}<th>المجموع</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </div>
+      ${printFooterHtml()}</body></html>`);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
+  };
+
   return (
     <div className="fade-in space-y-4">
-      <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-        <ClipboardList size={20} className="text-orange-500" /> تصحيح الأسئلة المقالية
-      </h2>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <ClipboardList size={20} className="text-orange-500" /> تصحيح الأسئلة المقالية
+        </h2>
+        <div className="flex items-center gap-2">
+          <button onClick={handlePrint} disabled={!selectedExamId || !essayQuestions.length}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50">
+            <Printer size={14} /> طباعة
+          </button>
+        </div>
+      </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 flex-wrap">
         <select value={selectedExamId} onChange={e => { setSelectedExamId(e.target.value); setEssayScores({}); }}
@@ -203,7 +276,7 @@ export default function ExamEssayGrading() {
             </div>
           </div>
 
-          <div className="flex justify-end">
+          <div className="flex justify-end gap-2">
             <button onClick={saveAllGrades} disabled={saving}
               className="px-6 py-2.5 bg-orange-500 text-white rounded-lg text-sm font-semibold hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2">
               {saving ? 'جاري الحفظ...' : <><CheckCircle size={16} /> حفظ جميع الدرجات</>}

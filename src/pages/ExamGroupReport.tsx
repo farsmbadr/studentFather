@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Users, BarChart3, TrendingUp, TrendingDown } from 'lucide-react';
+import { Users, BarChart3, TrendingUp, TrendingDown, Printer } from 'lucide-react';
 import { supabase } from '../supabaseClient';
+import { printHeaderHtml, printFooterHtml, printHeaderStyle } from '../utils/printHeader';
 
 export default function ExamGroupReport() {
   const [groups, setGroups] = useState<string[]>([]);
@@ -10,6 +11,10 @@ export default function ExamGroupReport() {
   const [selectedGroup, setSelectedGroup] = useState('');
   const [selectedExamId, setSelectedExamId] = useState('');
   const [loading, setLoading] = useState(true);
+  const [centerName, setCenterName] = useState('CenterMasr');
+  const [centerAddr, setCenterAddr] = useState('');
+  const [centerPhone, setCenterPhone] = useState('');
+  const [centerLogo, setCenterLogo] = useState('');
 
   useEffect(() => {
     Promise.all([
@@ -17,17 +22,18 @@ export default function ExamGroupReport() {
       supabase.from('exams').select('*').order('date', { ascending: false }),
       supabase.from('students').select('id,name,code,group_name,grade').eq('status', 'active'),
       supabase.from('exam_results').select('*'),
-    ]).then(([grp, ex, std, res]) => {
+      supabase.from('center_config').select('center_name,address,phone,logo').maybeSingle(),
+    ]).then(([grp, ex, std, res, cfg]) => {
       const seen = new Set<string>();
       setGroups((grp.data || []).map((g: any) => g.name).filter(g => { if (seen.has(g)) return false; seen.add(g); return true; }));
       setExams(ex.data || []);
       setStudents(std.data || []);
       setResults(res.data || []);
+      if (cfg.data) { setCenterName(cfg.data.center_name || 'CenterMasr'); setCenterAddr(cfg.data.address || ''); setCenterPhone(cfg.data.phone || ''); setCenterLogo(cfg.data.logo || ''); }
       setLoading(false);
     }).catch(() => setLoading(false));
   }, []);
 
-  // Get exam title from selected id
   const exam = exams.find(e => e.id === selectedExamId);
   const groupStudents = students.filter(s => s.group_name === selectedGroup);
   const groupResults = groupStudents.map(s => {
@@ -41,11 +47,64 @@ export default function ExamGroupReport() {
   const passed = groupResults.filter(r => r.pct !== null && r.pct >= 50).length;
   const failed = validCount - passed;
 
+  const handlePrint = () => {
+    const w = window.open('', '_blank');
+    if (!w) return;
+    const rows = groupResults.map((s, i) => `<tr>
+      <td>${i + 1}</td>
+      <td style="font-weight:bold">${s.name}</td>
+      <td>${s.result ? `${s.result.score} / ${s.result.max_score}` : '—'}</td>
+      <td>${s.pct !== null ? `${s.pct}%` : '—'}</td>
+      <td>${s.pct !== null ? (s.pct >= 85 ? 'ممتاز' : s.pct >= 65 ? 'جيد جداً' : s.pct >= 50 ? 'مقبول' : 'ضعيف') : '—'}</td>
+    </tr>`).join('');
+    w.document.write(`<!DOCTYPE html><html dir="rtl"><head><meta charset="utf-8"><title>تقرير مجموعة - ${selectedGroup}</title>
+      <style>
+        @page { size: landscape; margin: 5mm; }
+        * { font-family: 'Traditional Arabic', 'Arabic Typesetting', Arial, sans-serif; }
+        body { margin: 0; padding: 0; }
+        ${printHeaderStyle()}
+        .content { padding: 6mm 3mm; }
+        h2 { text-align: center; font-size: 14pt; color: #1e3a5f; margin: 0 0 4px; }
+        .sub { text-align: center; font-size: 12pt; color: #666; margin: 0 0 8px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12pt; }
+        th { background: #1e3a5f; color: white; padding: 5px 3px; text-align: center; font-weight: bold; }
+        td { padding: 3px 3px; border-bottom: 1px solid #ddd; text-align: center; }
+        tr:nth-child(even) { background: #f8f9fa; }
+        .stats { display: flex; justify-content: center; gap: 20px; margin-bottom: 8px; font-size: 12pt; }
+        .stats span { background: #f0f4f8; padding: 4px 12px; border-radius: 6px; }
+      </style></head><body>
+      ${printHeaderHtml({ center_name: centerName, address: centerAddr, phone: centerPhone, logo: centerLogo })}
+      <div class="content">
+      <h2>تقرير مجموعة — ${selectedGroup}</h2>
+      <p class="sub">${exam?.title} — ${exam?.subject}</p>
+      <div class="stats">
+        <span>المتوسط: ${overallAvg}%</span>
+        <span>ناجح: ${passed}</span>
+        <span>راسب: ${failed}</span>
+      </div>
+      <table>
+        <thead><tr><th>#</th><th>الطالب</th><th>الدرجة</th><th>النسبة</th><th>التقدير</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      </div>
+      ${printFooterHtml()}</body></html>`);
+    w.document.close();
+    setTimeout(() => { w.focus(); w.print(); w.close(); }, 500);
+  };
+
   return (
     <div className="fade-in space-y-4">
-      <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
-        <Users size={20} className="text-blue-500" /> تقرير مجموعة
-      </h2>
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+          <Users size={20} className="text-blue-500" /> تقرير مجموعة
+        </h2>
+        <div className="flex items-center gap-2">
+          <button onClick={handlePrint} disabled={!selectedGroup || !selectedExamId}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50">
+            <Printer size={14} /> طباعة
+          </button>
+        </div>
+      </div>
 
       <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 flex items-center gap-3 flex-wrap">
         <select value={selectedGroup} onChange={e => setSelectedGroup(e.target.value)}
@@ -64,7 +123,6 @@ export default function ExamGroupReport() {
 
       {!loading && selectedGroup && selectedExamId && (
         <>
-          {/* Stats cards */}
           <div className="grid grid-cols-3 gap-4">
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 text-center">
               <BarChart3 size={24} className="mx-auto mb-2 text-blue-500" />
@@ -83,7 +141,6 @@ export default function ExamGroupReport() {
             </div>
           </div>
 
-          {/* Students table */}
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">

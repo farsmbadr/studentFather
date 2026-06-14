@@ -44,7 +44,8 @@ export type Page =
   | 'monthly-stats'
   | 'finance-report'
   | 'group-fees'
-  | 'grades';
+  | 'grades'
+  | 'parent-messages';
 
 export interface Student {
   id: string;
