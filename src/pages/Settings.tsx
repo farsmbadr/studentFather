@@ -20,6 +20,7 @@ export default function Settings() {
 
   const [supabaseUrl, setSupabaseUrl] = useState('');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
+  const [supabaseServiceRoleKey, setSupabaseServiceRoleKey] = useState('');
   const [supabaseConfigured, setSupabaseConfigured] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
@@ -38,6 +39,7 @@ export default function Settings() {
         if (d.configured) {
           setSupabaseUrl(d.url || '');
           setSupabaseAnonKey(d.anonKey || '');
+          setSupabaseServiceRoleKey(d.serviceRoleKey || '');
           setSupabaseConfigured(true);
         }
       }
@@ -50,7 +52,7 @@ export default function Settings() {
       const r = await fetch('/api/sync-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: supabaseUrl.trim(), anonKey: supabaseAnonKey.trim() }),
+        body: JSON.stringify({ url: supabaseUrl.trim(), anonKey: supabaseAnonKey.trim(), serviceRoleKey: supabaseServiceRoleKey.trim() }),
       });
       if (!r.ok) throw new Error();
       setSupabaseConfigured(true);
@@ -347,6 +349,12 @@ export default function Settings() {
               <label className="text-xs text-gray-500 mb-1 block">Supabase Anon Key</label>
               <input type="text" value={supabaseAnonKey} onChange={e => setSupabaseAnonKey(e.target.value)}
                 placeholder="eyJhbGciOiJIUzI1NiIs..."
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono ltr text-left focus:outline-none focus:ring-2 focus:ring-sky-400" />
+            </div>
+            <div>
+              <label className="text-xs text-gray-500 mb-1 block">Service Role Key <span className="text-red-400">(ضروري للمزامنة)</span></label>
+              <input type="password" value={supabaseServiceRoleKey} onChange={e => setSupabaseServiceRoleKey(e.target.value)}
+                placeholder="sb_secret_..."
                 className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono ltr text-left focus:outline-none focus:ring-2 focus:ring-sky-400" />
             </div>
             <button onClick={saveSupabaseConfig}

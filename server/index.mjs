@@ -644,14 +644,14 @@ app.post('/api/change-password', (req, res) => {
 // ─── Supabase Sync (Cloud Portal) ───
 
 const SUPABASE_CONFIG_PATH = path.join(APP_DIR, 'supabase-config.json');
-const PORTAL_TABLES = ['students', 'payments', 'exam_results', 'absence_records', 'attendance_notes', 'book_deliveries', 'student_status', 'notifications', 'parent_messages', 'exams', 'questions', 'exam_questions', 'subjects'];
+const PORTAL_TABLES = ['students', 'payments', 'exam_results', 'absence_records', 'attendance_notes', 'book_deliveries', 'student_status', 'notifications', 'parent_messages', 'subjects', 'exams', 'questions', 'exam_questions'];
 
 // Save Supabase configuration
 app.post('/api/sync-config', (req, res) => {
   try {
-    const { url, anonKey } = req.body;
+    const { url, anonKey, serviceRoleKey } = req.body;
     if (!url || !anonKey) return res.status(400).json({ error: 'URL و Anon Key مطلوبان' });
-    fs.writeFileSync(SUPABASE_CONFIG_PATH, JSON.stringify({ url, anonKey }, null, 2));
+    fs.writeFileSync(SUPABASE_CONFIG_PATH, JSON.stringify({ url, anonKey, serviceRoleKey: serviceRoleKey || '' }, null, 2));
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -669,9 +669,11 @@ app.get('/api/sync-config', (req, res) => {
 app.post('/api/sync-to-supabase', async (req, res) => {
   try {
     if (!fs.existsSync(SUPABASE_CONFIG_PATH)) return res.status(400).json({ error: 'لم يتم تكوين Supabase بعد. أدخل الرابط والمفتاح أولاً.' });
-    const { url, anonKey } = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
+    const config = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
+    const { url, anonKey, serviceRoleKey } = config;
+    const key = serviceRoleKey || anonKey;
     const { createClient } = await import('@supabase/supabase-js');
-    const supabase = createClient(url, anonKey);
+    const supabase = createClient(url, key);
 
     const results = {};
     for (const table of PORTAL_TABLES) {
