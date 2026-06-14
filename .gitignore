@@ -36,6 +36,10 @@ dist-exe/
 # Delivery package
 CenterMasr-Delivery/
 
+# Supabase config (contains secret keys)
+supabase-config.json
+
 # Parent portal
 parent-portal/dist/
 parent-portal/node_modules/
+parent-portal/.env
