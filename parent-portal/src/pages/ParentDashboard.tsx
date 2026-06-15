@@ -38,13 +38,14 @@ export default function ParentDashboard() {
       const targets = ['all'];
       if (stage) targets.push(stage);
       if (studentInfo.code) targets.push(studentInfo.code);
+      const centerFilter = student.center_id ? { center_id: student.center_id } : {};
       const [paymentsRes, examsRes, absenceRes, notesRes, booksRes, notifRes, totalRes] = await Promise.all([
         supabase.from('payments').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(20),
         supabase.from('exam_results').select('*').eq('student_id', sid).order('date', { ascending: false }),
         supabase.from('absence_records').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(30),
         supabase.from('attendance_notes').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(20),
         supabase.from('book_deliveries').select('*').eq('student_id', sid).order('delivery_date', { ascending: false }).limit(20),
-        supabase.from('notifications').select('*').in('target', targets).order('created_at', { ascending: false }).limit(20),
+        supabase.from('notifications').select('*').match({ ...centerFilter }).in('target', targets).order('created_at', { ascending: false }).limit(20),
         supabase.from('payments').select('amount').eq('student_id', sid),
       ]);
       const payments = paymentsRes.data || [];
