@@ -43,3 +43,5 @@ supabase-config.json
 parent-portal/dist/
 parent-portal/node_modules/
 parent-portal/.env
+
+.vercel
