@@ -116,4 +116,5 @@ export interface DashboardData {
   statusEntries: StudentStatus[];
   notifications: Notification[];
   totalPaid: number;
+  totalOutstanding: number;
 }

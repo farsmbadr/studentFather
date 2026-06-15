@@ -44,7 +44,17 @@ export default function ParentDashboard() {
         supabase.from('payments').select('amount').eq('student_id', sid),
       ]);
       const payments = paymentsRes.data || [];
+      const books = booksRes.data || [];
       const totalPaid = totalRes.data?.reduce((sum: number, p: any) => sum + (p.amount || 0), 0) || 0;
+      // Calculate total outstanding like desktop app
+      const fee = Number(student.monthly_fee) || 0;
+      const joinDate = student.join_date ? new Date(student.join_date) : new Date();
+      const now = new Date();
+      let totalMonths = (now.getFullYear() - joinDate.getFullYear()) * 12 + (now.getMonth() - joinDate.getMonth()) + 1;
+      if (totalMonths < 0) totalMonths = 0;
+      const totalFeeDebt = Math.max(0, totalMonths * fee - totalPaid);
+      const bookDebt = books.reduce((s: number, b: any) => s + Number(b.remaining || 0), 0);
+      const totalOutstanding = totalFeeDebt + bookDebt;
       const code = student.code;
       const statusRes = await supabase.from('student_status').select('*').eq('student_code', code).order('date', { ascending: false }).limit(10);
       setData({
@@ -53,10 +63,11 @@ export default function ParentDashboard() {
         exams: examsRes.data || [],
         absence: absenceRes.data || [],
         notes: notesRes.data || [],
-        books: booksRes.data || [],
+        books,
         statusEntries: statusRes.data || [],
         notifications: notifRes.data || [],
         totalPaid,
+        totalOutstanding,
       });
     } catch (e: any) {
       setError(e.message || 'فشل تحميل البيانات');
@@ -197,13 +208,13 @@ export default function ParentDashboard() {
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <StatCard icon={<DollarSign size={16} className="text-white" />} label="المدفوع" value={`${data.totalPaid?.toLocaleString() || 0} ج`} color="from-emerald-500 to-teal-600" />
-          <StatCard icon={<DollarSign size={16} className="text-white" />} label="المتبقي" value={`${(student.balance || 0).toLocaleString()} ج`} color={student.balance > 0 ? 'from-red-500 to-rose-600' : 'from-green-500 to-emerald-600'} />
+          <StatCard icon={<DollarSign size={16} className="text-white" />} label="المتبقي" value={`${(data.totalOutstanding || 0).toLocaleString()} ج`} color={data.totalOutstanding > 0 ? 'from-red-500 to-rose-600' : 'from-green-500 to-emerald-600'} />
           <StatCard icon={<BarChart3 size={16} className="text-white" />} label="الامتحانات" value={exams.length} color="from-blue-500 to-indigo-600" />
           <StatCard icon={<FileText size={16} className="text-white" />} label="الغياب" value={absence.length} color="from-amber-500 to-orange-600" />
           <StatCard icon={<BookOpen size={16} className="text-white" />} label="الكتب" value={books.length} color="from-purple-500 to-pink-600" />
         </div>
 
-        <Section id="payments" title={`المصروفات — ${student.balance > 0 ? 'إجمالي المتأخر ' + student.balance.toLocaleString() + ' ج' : 'مدفوع بالكامل'}`} icon={<DollarSign size={14} className="text-white" />} color="from-emerald-500 to-teal-600">
+        <Section id="payments" title={`المصروفات — ${data.totalOutstanding > 0 ? 'إجمالي المتأخر ' + data.totalOutstanding.toLocaleString() + ' ج' : 'مدفوع بالكامل'}`} icon={<DollarSign size={14} className="text-white" />} color="from-emerald-500 to-teal-600">
           {payments.length === 0 ? <p className="text-white/30 text-sm text-center py-4">لا توجد مدفوعات</p> : (
             <div className="space-y-2">
               {payments.map((p: any) => (
