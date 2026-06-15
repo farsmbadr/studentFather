@@ -37,6 +37,7 @@ export default function ExamSetup({ examId, onBack }: { examId: string; onBack: 
   const [copied, setCopied] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [portalUrl, setPortalUrl] = useState('');
 
   // Mode
   const [mode, setMode] = useState<'manual' | 'auto'>('manual');
@@ -76,13 +77,14 @@ export default function ExamSetup({ examId, onBack }: { examId: string; onBack: 
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [examId]);
+  useEffect(() => { load(); fetch('/api/portal-url').then(r => r.json()).then(d => setPortalUrl(d.url || '')).catch(() => {}); }, [examId]);
 
   const subject = exam ? allSubjects.find(s => s.name === exam.subject) || allSubjects.find(s => s.id === exam.subject) : null;
   const subjectId = subject?.id || exam?.subject;
   const subjectName = subject?.name || exam?.subject || '';
   const filteredQuestions = questions.filter(q => q.subject_id === subjectId);
-  const examLink = exam?.exam_link || `${window.location.origin}/take-exam/${examId}`;
+  const baseUrl = portalUrl || window.location.origin;
+  const examLink = exam?.exam_link || `${baseUrl}/take-exam/${examId}`;
   const bankCount = filteredQuestions.length;
   const selectedCount = selectedIds.length;
   const levelOrder: Record<string, number> = { ابتدائي: 0, إعدادي: 1, ثانوي: 2 };

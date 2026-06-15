@@ -21,6 +21,7 @@ export default function Settings() {
   const [supabaseUrl, setSupabaseUrl] = useState('');
   const [supabaseAnonKey, setSupabaseAnonKey] = useState('');
   const [supabaseServiceRoleKey, setSupabaseServiceRoleKey] = useState('');
+  const [portalUrl, setPortalUrl] = useState('');
   const [supabaseConfigured, setSupabaseConfigured] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
@@ -40,6 +41,7 @@ export default function Settings() {
           setSupabaseUrl(d.url || '');
           setSupabaseAnonKey(d.anonKey || '');
           setSupabaseServiceRoleKey(d.serviceRoleKey || '');
+          setPortalUrl(d.portalUrl || '');
           setSupabaseConfigured(true);
         }
       }
@@ -52,7 +54,7 @@ export default function Settings() {
       const r = await fetch('/api/sync-config', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ url: supabaseUrl.trim(), anonKey: supabaseAnonKey.trim(), serviceRoleKey: supabaseServiceRoleKey.trim() }),
+        body: JSON.stringify({ url: supabaseUrl.trim(), anonKey: supabaseAnonKey.trim(), serviceRoleKey: supabaseServiceRoleKey.trim(), portalUrl: portalUrl.trim() }),
       });
       if (!r.ok) throw new Error();
       setSupabaseConfigured(true);
@@ -304,30 +306,41 @@ export default function Settings() {
         {/* ── Portal URLs ── */}
         <div className="bg-white rounded-2xl shadow p-5">
           <div className="flex items-center gap-2 mb-5">
-            <Info size={18} className="text-blue-500" />
-            <h3 className="font-bold text-gray-800">روابط البوابات الإلكترونية</h3>
+            <Globe size={18} className="text-blue-500" />
+            <h3 className="font-bold text-gray-800">رابط البوابة الإلكترونية</h3>
           </div>
           <div className="space-y-4">
             <div>
-              <p className="text-xs text-gray-500 mb-1.5">بوابة ولي الأمر — يدخل ولي الأمر بكود الطالب + هاتف ولي الأمر</p>
-              <div className="flex items-center gap-2">
-                <input type="text" readOnly value={window.location.origin + '/parent'} className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono focus:outline-none ltr text-left" />
-                <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/parent'); show('تم نسخ رابط ولي الأمر', 'success'); }}
-                  className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-4 py-2 rounded-xl transition-colors shrink-0">
-                  نسخ
-                </button>
-              </div>
+              <label className="text-xs text-gray-500 mb-1 block">رابط الموقع (Vercel)</label>
+              <input type="url" value={portalUrl} onChange={e => setPortalUrl(e.target.value)}
+                placeholder="https://student-father.vercel.app"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 ltr text-left focus:outline-none focus:ring-2 focus:ring-blue-400" />
+              <p className="text-xs text-gray-400 mt-1">هذا الرابط يستخدم لإنشاء روابط الامتحانات للطلاب</p>
             </div>
-            <div>
-              <p className="text-xs text-gray-500 mb-1.5">بوابة الطالب — يدخل الطالب بكود الطالب + رقم هاتفه الشخصي</p>
-              <div className="flex items-center gap-2">
-                <input type="text" readOnly value={window.location.origin + '/student'} className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono focus:outline-none ltr text-left" />
-                <button onClick={() => { navigator.clipboard.writeText(window.location.origin + '/student'); show('تم نسخ رابط الطالب', 'success'); }}
-                  className="bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-4 py-2 rounded-xl transition-colors shrink-0">
-                  نسخ
-                </button>
+            {portalUrl && (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-xs text-gray-500 mb-1.5">بوابة ولي الأمر</p>
+                  <div className="flex items-center gap-2">
+                    <input type="text" readOnly value={portalUrl + '/parent'} className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono focus:outline-none ltr text-left" />
+                    <button onClick={() => { navigator.clipboard.writeText(portalUrl + '/parent'); show('تم نسخ رابط ولي الأمر', 'success'); }}
+                      className="bg-blue-500 hover:bg-blue-600 text-white text-xs px-4 py-2 rounded-xl transition-colors shrink-0">
+                      نسخ
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500 mb-1.5">بوابة الطالب</p>
+                  <div className="flex items-center gap-2">
+                    <input type="text" readOnly value={portalUrl + '/student'} className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 text-sm text-gray-700 font-mono focus:outline-none ltr text-left" />
+                    <button onClick={() => { navigator.clipboard.writeText(portalUrl + '/student'); show('تم نسخ رابط الطالب', 'success'); }}
+                      className="bg-indigo-500 hover:bg-indigo-600 text-white text-xs px-4 py-2 rounded-xl transition-colors shrink-0">
+                      نسخ
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 

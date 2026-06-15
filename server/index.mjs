@@ -649,9 +649,9 @@ const PORTAL_TABLES = ['students', 'payments', 'exam_results', 'absence_records'
 // Save Supabase configuration
 app.post('/api/sync-config', (req, res) => {
   try {
-    const { url, anonKey, serviceRoleKey } = req.body;
+    const { url, anonKey, serviceRoleKey, portalUrl } = req.body;
     if (!url || !anonKey) return res.status(400).json({ error: 'URL و Anon Key مطلوبان' });
-    fs.writeFileSync(SUPABASE_CONFIG_PATH, JSON.stringify({ url, anonKey, serviceRoleKey: serviceRoleKey || '' }, null, 2));
+    fs.writeFileSync(SUPABASE_CONFIG_PATH, JSON.stringify({ url, anonKey, serviceRoleKey: serviceRoleKey || '', portalUrl: portalUrl || '' }, null, 2));
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -663,6 +663,17 @@ app.get('/api/sync-config', (req, res) => {
     const config = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
     res.json({ configured: true, ...config });
   } catch { res.json({ configured: false }); }
+});
+
+// Get portal URL (for exam link generation)
+app.get('/api/portal-url', (req, res) => {
+  try {
+    if (fs.existsSync(SUPABASE_CONFIG_PATH)) {
+      const config = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
+      if (config.portalUrl) return res.json({ url: config.portalUrl });
+    }
+    res.json({ url: '' });
+  } catch { res.json({ url: '' }); }
 });
 
 // Sync portal data to Supabase
