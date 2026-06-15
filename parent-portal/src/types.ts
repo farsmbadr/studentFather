@@ -7,10 +7,12 @@ export interface Student {
   phone: string;
   status: 'active' | 'inactive';
   monthly_fee: number;
+  balance: number;
   join_date: string;
   parent_name?: string;
   parent_phone?: string;
   address?: string;
+  center_id?: string;
 }
 
 export interface Payment {
