@@ -690,12 +690,9 @@ app.post('/api/sync-to-supabase', async (req, res) => {
     for (const table of PORTAL_TABLES) {
       const rows = queryAll(`SELECT * FROM "${table}"`);
       if (rows.length === 0) { results[table] = { count: 0, status: 'ok' }; continue; }
-      // Delete existing data in Supabase to avoid duplicates (simple sync approach)
-      // For production, use upsert based on id
-      const { error: delErr } = await supabase.from(table).delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      if (delErr) { results[table] = { count: 0, status: 'error', error: delErr.message }; continue; }
-      const { error: insErr } = await supabase.from(table).insert(rows);
-      if (insErr) { results[table] = { count: 0, status: 'error', error: insErr.message }; }
+      // Upsert — keeps data from all centers, no deletion
+      const { error: upsertErr } = await supabase.from(table).upsert(rows, { onConflict: 'id', ignoreDuplicates: false });
+      if (upsertErr) { results[table] = { count: 0, status: 'error', error: upsertErr.message }; }
       else { results[table] = { count: rows.length, status: 'ok' }; }
     }
     res.json({ ok: true, results });
