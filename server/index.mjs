@@ -148,6 +148,15 @@ async function initDB() {
     console.log('Students balance migration:', e.message);
   }
 
+  // Add total_outstanding column to students
+  try {
+    const stuCols = queryAll("PRAGMA table_info('students')").map(c => c.name);
+    if (!stuCols.includes('total_outstanding')) db.run("ALTER TABLE students ADD COLUMN total_outstanding REAL DEFAULT 0");
+    saveDB();
+  } catch (e) {
+    console.log('Students total_outstanding migration:', e.message);
+  }
+
   // Add center_id column to all portal tables (multi-center support)
   try {
     const portalTables = ['students', 'payments', 'exam_results', 'absence_records', 'attendance_notes', 'book_deliveries', 'student_status', 'notifications', 'parent_messages', 'subjects', 'exams', 'questions', 'exam_questions'];
@@ -731,6 +740,31 @@ app.post('/api/sync-to-supabase', async (req, res) => {
       // Ensure each row has center_id set
       for (const row of rows) {
         if (!row.center_id) row.center_id = centerId || '';
+      }
+      // Calculate total_outstanding for students (same as desktop app)
+      if (table === 'students') {
+        const allPayments = queryAll('SELECT student_id, amount FROM payments');
+        const allBooks = queryAll('SELECT student_id, remaining FROM book_deliveries');
+        const payMap = {};
+        for (const p of allPayments) {
+          if (!payMap[p.student_id]) payMap[p.student_id] = 0;
+          payMap[p.student_id] += Number(p.amount) || 0;
+        }
+        const bookMap = {};
+        for (const b of allBooks) {
+          if (!bookMap[b.student_id]) bookMap[b.student_id] = 0;
+          bookMap[b.student_id] += Number(b.remaining) || 0;
+        }
+        const now = new Date();
+        for (const row of rows) {
+          const fee = Number(row.monthly_fee) || 0;
+          const joinDate = row.join_date ? new Date(row.join_date) : new Date();
+          const totalMonths = Math.max(0, (now.getFullYear() - joinDate.getFullYear()) * 12 + (now.getMonth() - joinDate.getMonth()) + 1);
+          const totalPaid = payMap[row.id] || 0;
+          const totalFeeDebt = Math.max(0, totalMonths * fee - totalPaid);
+          const bookDebt = bookMap[row.id] || 0;
+          row.total_outstanding = totalFeeDebt + bookDebt;
+        }
       }
       // Upsert — keeps data from all centers, no deletion
       const { error: upsertErr } = await supabase.from(table).upsert(rows, { onConflict: 'id', ignoreDuplicates: false });

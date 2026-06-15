@@ -270,6 +270,9 @@ CREATE INDEX IF NOT EXISTS idx_questions_center_id ON questions(center_id);
 CREATE INDEX IF NOT EXISTS idx_exam_questions_center_id ON exam_questions(center_id);
 CREATE INDEX IF NOT EXISTS idx_subjects_center_id ON subjects(center_id);
 
+-- Add total_outstanding column to students
+ALTER TABLE students ADD COLUMN IF NOT EXISTS total_outstanding REAL DEFAULT 0;
+
 -- Migration for existing databases: add center_id column if missing
 DO $$ BEGIN
   ALTER TABLE students ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';

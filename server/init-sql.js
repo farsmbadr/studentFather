@@ -25,6 +25,7 @@ const sql = `CREATE TABLE IF NOT EXISTS students (
   birth_date TEXT,
   email TEXT DEFAULT '',
   balance REAL DEFAULT 0,
+  total_outstanding REAL DEFAULT 0,
   deletion_reason TEXT DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS absence_records (

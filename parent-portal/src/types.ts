@@ -8,6 +8,7 @@ export interface Student {
   status: 'active' | 'inactive';
   monthly_fee: number;
   balance: number;
+  total_outstanding: number;
   join_date: string;
   parent_name?: string;
   parent_phone?: string;
@@ -116,5 +117,4 @@ export interface DashboardData {
   statusEntries: StudentStatus[];
   notifications: Notification[];
   totalPaid: number;
-  totalOutstanding: number;
 }
