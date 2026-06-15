@@ -35,7 +35,7 @@ export default function StudentDashboard() {
         supabase.from('absence_records').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(30),
         supabase.from('attendance_notes').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(20),
         supabase.from('book_deliveries').select('*').eq('student_id', sid).order('delivery_date', { ascending: false }).limit(20),
-        supabase.from('notifications').select('*').match({ ...centerFilter }).eq('target', student.code).order('created_at', { ascending: false }).limit(20),
+        supabase.from('notifications').select('*').match({ ...centerFilter }).in('target', ['all', student.code]).order('created_at', { ascending: false }).limit(20),
         supabase.from('payments').select('amount').eq('student_id', sid),
       ]);
       const payments = paymentsRes.data || [];
@@ -162,7 +162,7 @@ export default function StudentDashboard() {
           <StatCard icon={<BookOpen size={16} className="text-white" />} label="الكتب" value={books.length} color="from-purple-500 to-pink-600" />
         </div>
 
-        <Section id="payments" title={`المصروفات${student.monthly_fee ? ' (الشهر: ' + student.monthly_fee.toLocaleString() + ' ج)' : ''}`} icon={<DollarSign size={14} className="text-white" />} color="from-emerald-500 to-teal-600">
+        <Section id="payments" title={`المصروفات — ${student.balance > 0 ? 'إجمالي المتأخر ' + student.balance.toLocaleString() + ' ج' : 'مدفوع بالكامل'}`} icon={<DollarSign size={14} className="text-white" />} color="from-emerald-500 to-teal-600">
           {payments.length === 0 ? <p className="text-white/30 text-sm text-center py-4">لا توجد مدفوعات</p> : (
             <div className="space-y-2">
               {payments.map((p: any) => (
