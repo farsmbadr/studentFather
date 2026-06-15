@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Download, Upload, Trash2, AlertTriangle, Shield, Server, Phone, User, Calendar, Clock, CheckCircle, XCircle, Info, Settings as SettingsIcon, Cloud, Globe } from 'lucide-react';
+import { Download, Upload, Trash2, AlertTriangle, Shield, Server, Phone, User, Calendar, Clock, CheckCircle, XCircle, Info, Settings as SettingsIcon, Cloud, Globe, Database, AlertCircle } from 'lucide-react';
 import { supabase } from '../supabaseClient';
 import { useToast } from '../components/Toast';
 
@@ -25,11 +25,14 @@ export default function Settings() {
   const [supabaseConfigured, setSupabaseConfigured] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [syncResult, setSyncResult] = useState<any>(null);
+  const [centerId, setCenterId] = useState('');
+  const [clearing, setClearing] = useState(false);
 
   useEffect(() => {
     fetch('/api/machine-id').then(r => r.json()).then(d => setMachineId(d.machineId)).catch(() => setMachineId('غير معروف'));
     checkLicense();
     loadSupabaseConfig();
+    fetch('/api/center-id').then(r => r.json()).then(d => setCenterId(d.centerId || '')).catch(() => {});
   }, []);
 
   const loadSupabaseConfig = async () => {
@@ -76,6 +79,23 @@ export default function Settings() {
       show('تمت المزامنة بنجاح');
     } catch (e: any) { show('فشلت المزامنة: ' + e.message, 'error'); }
     setSyncing(false);
+  };
+
+  const handleClearCloudData = async () => {
+    if (!supabaseConfigured) return show('قم بإعداد Supabase أولاً', 'error');
+    if (!centerId) return show('لم يتم العثور على معرف السنتر', 'error');
+    const ok = await confirm('سيتم حذف بيانات هذا السنتر فقط من السحابة (Supabase).\n\nبيانات السنترات التانية مش هتتأثر.\nهل أنت متأكد؟');
+    if (!ok) return;
+    const ok2 = await confirm('تأكيد نهائي: حذف كل بيانات سنترك من السحابة؟\n\nهتروح نهائياً ولا تقدر ترجعها غير بعمل Sync تاني.');
+    if (!ok2) return;
+    setClearing(true);
+    try {
+      const r = await fetch('/api/clear-center-data', { method: 'POST' });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error);
+      show('تم مسح بيانات سنترك من السحابة');
+    } catch (e: any) { show('فشل المسح: ' + e.message, 'error'); }
+    setClearing(false);
   };
 
   const checkLicense = async () => {
@@ -393,6 +413,22 @@ export default function Settings() {
                   </div>
                 ))}
               </div>
+            )}
+            {centerId && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3">
+                <div className="flex items-center gap-2 mb-2">
+                  <Database size={14} className="text-amber-600" />
+                  <span className="text-xs font-bold text-amber-800">معرف السنتر (Center ID)</span>
+                </div>
+                <p className="text-xs font-mono text-amber-700 break-all bg-white rounded-lg px-2 py-1.5 border border-amber-100">{centerId}</p>
+                <p className="text-[10px] text-amber-600 mt-1.5">هذا المعرف يميز بيانات سنترك عن باقي السناتر في السحابة</p>
+              </div>
+            )}
+            {supabaseConfigured && centerId && (
+              <button onClick={handleClearCloudData} disabled={clearing}
+                className="flex items-center gap-2 w-full bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-semibold px-5 py-3 rounded-xl transition-all shadow-md">
+                <Trash2 size={16} /> {clearing ? 'جاري المسح...' : 'مسح بيانات سنتري من السحابة'}
+              </button>
             )}
           </div>
         </div>

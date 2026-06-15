@@ -148,6 +148,35 @@ async function initDB() {
     console.log('Students balance migration:', e.message);
   }
 
+  // Add center_id column to all portal tables (multi-center support)
+  try {
+    const portalTables = ['students', 'payments', 'exam_results', 'absence_records', 'attendance_notes', 'book_deliveries', 'student_status', 'notifications', 'parent_messages', 'subjects', 'exams', 'questions', 'exam_questions'];
+    for (const t of portalTables) {
+      const cols = queryAll("PRAGMA table_info('" + t + "')").map(c => c.name);
+      if (!cols.includes('center_id')) {
+        db.run("ALTER TABLE \"" + t + "\" ADD COLUMN center_id TEXT NOT NULL DEFAULT ''");
+      }
+    }
+    saveDB();
+  } catch (e) {
+    console.log('center_id migration:', e.message);
+  }
+
+  // Generate or load center_id
+  try {
+    if (fs.existsSync(SUPABASE_CONFIG_PATH)) {
+      const cfg = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
+      if (!cfg.centerId) {
+        cfg.centerId = crypto.randomUUID();
+        fs.writeFileSync(SUPABASE_CONFIG_PATH, JSON.stringify(cfg, null, 2));
+      }
+    } else {
+      fs.writeFileSync(SUPABASE_CONFIG_PATH, JSON.stringify({ centerId: crypto.randomUUID(), url: '', anonKey: '', serviceRoleKey: '', portalUrl: '' }, null, 2));
+    }
+  } catch (e) {
+    console.log('center_id generation:', e.message);
+  }
+
   console.log('SQLite ready at', DB_PATH);
   // Auto-backup on every startup (safety net)
   try {
@@ -653,7 +682,14 @@ app.post('/api/sync-config', (req, res) => {
   try {
     const { url, anonKey, serviceRoleKey, portalUrl } = req.body;
     if (!url || !anonKey) return res.status(400).json({ error: 'URL و Anon Key مطلوبان' });
-    fs.writeFileSync(SUPABASE_CONFIG_PATH, JSON.stringify({ url, anonKey, serviceRoleKey: serviceRoleKey || '', portalUrl: portalUrl || '' }, null, 2));
+    // Preserve existing centerId
+    let centerId = '';
+    if (fs.existsSync(SUPABASE_CONFIG_PATH)) {
+      const existing = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
+      centerId = existing.centerId || '';
+    }
+    if (!centerId) centerId = crypto.randomUUID();
+    fs.writeFileSync(SUPABASE_CONFIG_PATH, JSON.stringify({ url, anonKey, serviceRoleKey: serviceRoleKey || '', portalUrl: portalUrl || '', centerId }, null, 2));
     res.json({ ok: true });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
@@ -683,7 +719,7 @@ app.post('/api/sync-to-supabase', async (req, res) => {
   try {
     if (!fs.existsSync(SUPABASE_CONFIG_PATH)) return res.status(400).json({ error: 'لم يتم تكوين Supabase بعد. أدخل الرابط والمفتاح أولاً.' });
     const config = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
-    const { url, anonKey, serviceRoleKey } = config;
+    const { url, anonKey, serviceRoleKey, centerId } = config;
     const key = serviceRoleKey || anonKey;
     const { createClient } = __require('@supabase/supabase-js');
     const supabase = createClient(url, key);
@@ -692,6 +728,10 @@ app.post('/api/sync-to-supabase', async (req, res) => {
     for (const table of PORTAL_TABLES) {
       const rows = queryAll(`SELECT * FROM "${table}"`);
       if (rows.length === 0) { results[table] = { count: 0, status: 'ok' }; continue; }
+      // Ensure each row has center_id set
+      for (const row of rows) {
+        if (!row.center_id) row.center_id = centerId || '';
+      }
       // Upsert — keeps data from all centers, no deletion
       const { error: upsertErr } = await supabase.from(table).upsert(rows, { onConflict: 'id', ignoreDuplicates: false });
       if (upsertErr) { results[table] = { count: 0, status: 'error', error: upsertErr.message }; }
@@ -720,6 +760,38 @@ app.post('/api/sync-to-supabase', async (req, res) => {
       results['parent_messages_pull'] = { status: 'error', error: pullErr.message };
     }
 
+    res.json({ ok: true, results });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
+
+// Get center ID
+app.get('/api/center-id', (req, res) => {
+  try {
+    if (fs.existsSync(SUPABASE_CONFIG_PATH)) {
+      const cfg = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
+      return res.json({ centerId: cfg.centerId || '' });
+    }
+    res.json({ centerId: '' });
+  } catch { res.json({ centerId: '' }); }
+});
+
+// Clear this center's data from Supabase
+app.post('/api/clear-center-data', async (req, res) => {
+  try {
+    if (!fs.existsSync(SUPABASE_CONFIG_PATH)) return res.status(400).json({ error: 'لم يتم تكوين Supabase بعد' });
+    const config = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
+    const { url, anonKey, serviceRoleKey, centerId } = config;
+    if (!centerId) return res.status(400).json({ error: 'لم يتم العثور على معرف السنتر' });
+    const key = serviceRoleKey || anonKey;
+    const { createClient } = __require('@supabase/supabase-js');
+    const supabase = createClient(url, key);
+
+    const results = {};
+    for (const table of PORTAL_TABLES) {
+      const { error, count } = await supabase.from(table).delete().eq('center_id', centerId);
+      if (error) results[table] = { status: 'error', error: error.message };
+      else results[table] = { status: 'ok', deleted: count || 0 };
+    }
     res.json({ ok: true, results });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

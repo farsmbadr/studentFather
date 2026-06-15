@@ -1,5 +1,6 @@
 const sql = `CREATE TABLE IF NOT EXISTS students (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL DEFAULT '',
   code TEXT NOT NULL DEFAULT '',
   grade TEXT NOT NULL DEFAULT '',
@@ -28,6 +29,7 @@ const sql = `CREATE TABLE IF NOT EXISTS students (
 );
 CREATE TABLE IF NOT EXISTS absence_records (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   student_id TEXT NOT NULL DEFAULT '',
   student_name TEXT NOT NULL DEFAULT '',
   student_code TEXT NOT NULL DEFAULT '',
@@ -39,6 +41,7 @@ CREATE TABLE IF NOT EXISTS absence_records (
 );
 CREATE TABLE IF NOT EXISTS payments (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   student_id TEXT NOT NULL DEFAULT '',
   student_name TEXT NOT NULL DEFAULT '',
   amount REAL NOT NULL DEFAULT 0,
@@ -49,6 +52,7 @@ CREATE TABLE IF NOT EXISTS payments (
 );
 CREATE TABLE IF NOT EXISTS exam_results (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   student_id TEXT NOT NULL DEFAULT '',
   student_name TEXT NOT NULL DEFAULT '',
   exam_title TEXT NOT NULL DEFAULT '',
@@ -63,6 +67,7 @@ CREATE TABLE IF NOT EXISTS exam_results (
 );
 CREATE TABLE IF NOT EXISTS attendance_notes (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   student_id TEXT NOT NULL DEFAULT '',
   student_name TEXT NOT NULL DEFAULT '',
   note TEXT NOT NULL DEFAULT '',
@@ -78,6 +83,7 @@ CREATE TABLE IF NOT EXISTS student_groups (
 );
 CREATE TABLE IF NOT EXISTS exams (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL DEFAULT '',
   exam_type TEXT NOT NULL DEFAULT 'ورقة',
   subject TEXT NOT NULL DEFAULT '',
@@ -110,6 +116,7 @@ CREATE TABLE IF NOT EXISTS teachers (
 );
 CREATE TABLE IF NOT EXISTS subjects (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL DEFAULT '',
   income REAL DEFAULT 0,
   created_at TEXT DEFAULT (datetime('now'))
@@ -151,6 +158,7 @@ CREATE TABLE IF NOT EXISTS groups (
 );
 CREATE TABLE IF NOT EXISTS notifications (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL DEFAULT '',
   message TEXT NOT NULL DEFAULT '',
   target TEXT NOT NULL DEFAULT 'all',
@@ -192,6 +200,7 @@ CREATE TABLE IF NOT EXISTS center_config (
 );
 CREATE TABLE IF NOT EXISTS student_status (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   student_name TEXT NOT NULL DEFAULT '',
   student_code TEXT NOT NULL DEFAULT '',
   grade TEXT NOT NULL DEFAULT '',
@@ -229,6 +238,7 @@ CREATE TABLE IF NOT EXISTS group_subjects (
 );
 CREATE TABLE IF NOT EXISTS questions (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   subject_id TEXT,
   question_text TEXT NOT NULL DEFAULT '',
   options TEXT DEFAULT '[]',
@@ -240,6 +250,7 @@ CREATE TABLE IF NOT EXISTS questions (
 );
 CREATE TABLE IF NOT EXISTS exam_questions (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   exam_id TEXT NOT NULL,
   question_id TEXT NOT NULL,
   order_number INTEGER NOT NULL DEFAULT 0,
@@ -273,6 +284,7 @@ CREATE TABLE IF NOT EXISTS supplier_transactions (
 CREATE TABLE IF NOT EXISTS book_deliveries (
   id TEXT PRIMARY KEY,
   student_id TEXT,
+  center_id TEXT NOT NULL DEFAULT '',
   student_name TEXT DEFAULT '',
   book_title TEXT NOT NULL DEFAULT '',
   book_subject TEXT DEFAULT '',
@@ -322,6 +334,7 @@ CREATE TABLE IF NOT EXISTS custom_roles (
 );
 CREATE TABLE IF NOT EXISTS parent_messages (
   id TEXT PRIMARY KEY,
+  center_id TEXT NOT NULL DEFAULT '',
   student_id TEXT NOT NULL DEFAULT '',
   student_name TEXT DEFAULT '',
   student_code TEXT DEFAULT '',

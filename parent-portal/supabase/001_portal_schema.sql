@@ -7,6 +7,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- 1. Students
 CREATE TABLE IF NOT EXISTS students (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL DEFAULT '',
   code TEXT NOT NULL DEFAULT '',
   grade TEXT NOT NULL DEFAULT '',
@@ -37,6 +38,7 @@ CREATE TABLE IF NOT EXISTS students (
 -- 2. Payments
 CREATE TABLE IF NOT EXISTS payments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   student_name TEXT NOT NULL DEFAULT '',
   amount REAL NOT NULL DEFAULT 0,
@@ -49,6 +51,7 @@ CREATE TABLE IF NOT EXISTS payments (
 -- 3. Exam Results
 CREATE TABLE IF NOT EXISTS exam_results (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   student_name TEXT NOT NULL DEFAULT '',
   exam_title TEXT NOT NULL DEFAULT '',
@@ -65,6 +68,7 @@ CREATE TABLE IF NOT EXISTS exam_results (
 -- 4. Absence Records
 CREATE TABLE IF NOT EXISTS absence_records (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   student_name TEXT NOT NULL DEFAULT '',
   student_code TEXT NOT NULL DEFAULT '',
@@ -78,6 +82,7 @@ CREATE TABLE IF NOT EXISTS absence_records (
 -- 5. Attendance Notes
 CREATE TABLE IF NOT EXISTS attendance_notes (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   student_name TEXT NOT NULL DEFAULT '',
   note TEXT NOT NULL DEFAULT '',
@@ -88,6 +93,7 @@ CREATE TABLE IF NOT EXISTS attendance_notes (
 -- 6. Book Deliveries
 CREATE TABLE IF NOT EXISTS book_deliveries (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   student_id UUID REFERENCES students(id) ON DELETE CASCADE,
   student_name TEXT DEFAULT '',
   book_title TEXT NOT NULL DEFAULT '',
@@ -107,6 +113,7 @@ CREATE TABLE IF NOT EXISTS book_deliveries (
 -- 7. Student Status
 CREATE TABLE IF NOT EXISTS student_status (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   student_name TEXT NOT NULL DEFAULT '',
   student_code TEXT NOT NULL DEFAULT '',
   grade TEXT NOT NULL DEFAULT '',
@@ -119,6 +126,7 @@ CREATE TABLE IF NOT EXISTS student_status (
 -- 8. Notifications
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL DEFAULT '',
   message TEXT NOT NULL DEFAULT '',
   target TEXT NOT NULL DEFAULT 'all',
@@ -129,6 +137,7 @@ CREATE TABLE IF NOT EXISTS notifications (
 -- 9. Parent Messages
 CREATE TABLE IF NOT EXISTS parent_messages (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   student_id UUID NOT NULL REFERENCES students(id) ON DELETE CASCADE,
   student_name TEXT DEFAULT '',
   student_code TEXT DEFAULT '',
@@ -146,6 +155,7 @@ CREATE TABLE IF NOT EXISTS parent_messages (
 -- 10. Exams
 CREATE TABLE IF NOT EXISTS exams (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL DEFAULT '',
   exam_type TEXT NOT NULL DEFAULT 'ورقة',
   subject TEXT NOT NULL DEFAULT '',
@@ -167,6 +177,7 @@ CREATE TABLE IF NOT EXISTS exams (
 -- 11. Questions
 CREATE TABLE IF NOT EXISTS questions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   subject_id UUID REFERENCES subjects(id) ON DELETE CASCADE,
   question_text TEXT NOT NULL DEFAULT '',
   options JSONB DEFAULT '[]',
@@ -179,6 +190,7 @@ CREATE TABLE IF NOT EXISTS questions (
 -- 12. Exam Questions (junction)
 CREATE TABLE IF NOT EXISTS exam_questions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   exam_id UUID NOT NULL REFERENCES exams(id) ON DELETE CASCADE,
   question_id UUID NOT NULL REFERENCES questions(id) ON DELETE CASCADE,
   order_number INTEGER NOT NULL DEFAULT 0,
@@ -190,6 +202,7 @@ CREATE TABLE IF NOT EXISTS exam_questions (
 -- Helper table needed by TakeExam
 CREATE TABLE IF NOT EXISTS subjects (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  center_id TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL DEFAULT '',
   income REAL DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -241,3 +254,72 @@ CREATE POLICY "Allow all select" ON subjects FOR SELECT USING (true);
 -- Allow insert for exam_results and parent_messages (students submit exams, parents send messages)
 CREATE POLICY "Allow insert" ON exam_results FOR INSERT WITH CHECK (true);
 CREATE POLICY "Allow insert" ON parent_messages FOR INSERT WITH CHECK (true);
+
+-- Index for multi-center support
+CREATE INDEX IF NOT EXISTS idx_students_center_id ON students(center_id);
+CREATE INDEX IF NOT EXISTS idx_payments_center_id ON payments(center_id);
+CREATE INDEX IF NOT EXISTS idx_exam_results_center_id ON exam_results(center_id);
+CREATE INDEX IF NOT EXISTS idx_absence_records_center_id ON absence_records(center_id);
+CREATE INDEX IF NOT EXISTS idx_attendance_notes_center_id ON attendance_notes(center_id);
+CREATE INDEX IF NOT EXISTS idx_book_deliveries_center_id ON book_deliveries(center_id);
+CREATE INDEX IF NOT EXISTS idx_student_status_center_id ON student_status(center_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_center_id ON notifications(center_id);
+CREATE INDEX IF NOT EXISTS idx_parent_messages_center_id ON parent_messages(center_id);
+CREATE INDEX IF NOT EXISTS idx_exams_center_id ON exams(center_id);
+CREATE INDEX IF NOT EXISTS idx_questions_center_id ON questions(center_id);
+CREATE INDEX IF NOT EXISTS idx_exam_questions_center_id ON exam_questions(center_id);
+CREATE INDEX IF NOT EXISTS idx_subjects_center_id ON subjects(center_id);
+
+-- Migration for existing databases: add center_id column if missing
+DO $$ BEGIN
+  ALTER TABLE students ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE payments ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE exam_results ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE absence_records ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE attendance_notes ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE book_deliveries ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE student_status ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE notifications ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE parent_messages ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE exams ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE questions ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE exam_questions ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
+DO $$ BEGIN
+  ALTER TABLE subjects ADD COLUMN IF NOT EXISTS center_id TEXT NOT NULL DEFAULT '';
+EXCEPTION WHEN duplicate_column THEN NULL;
+END $$;
