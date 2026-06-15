@@ -28,11 +28,6 @@ export default function StudentDashboard() {
       const studentRes = await supabase.from('students').select('*').eq('id', sid).maybeSingle();
       const student = studentRes.data;
       if (!student) { setError('الطالب غير موجود'); setLoading(false); return; }
-      const grade = student.grade || '';
-      const stage = grade.includes('ابتدائي') ? 'primary' : grade.includes('إعدادي') ? 'prep' : grade.includes('ثانوي') ? 'secondary' : '';
-      const targets = ['all'];
-      if (stage) targets.push(stage);
-      if (studentInfo.code) targets.push(studentInfo.code);
       const centerFilter = student.center_id ? { center_id: student.center_id } : {};
       const [paymentsRes, examsRes, absenceRes, notesRes, booksRes, notifRes, totalRes] = await Promise.all([
         supabase.from('payments').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(20),
@@ -40,7 +35,7 @@ export default function StudentDashboard() {
         supabase.from('absence_records').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(30),
         supabase.from('attendance_notes').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(20),
         supabase.from('book_deliveries').select('*').eq('student_id', sid).order('delivery_date', { ascending: false }).limit(20),
-        supabase.from('notifications').select('*').match({ ...centerFilter }).in('target', targets).order('created_at', { ascending: false }).limit(20),
+        supabase.from('notifications').select('*').match({ ...centerFilter }).eq('target', student.code).order('created_at', { ascending: false }).limit(20),
         supabase.from('payments').select('amount').eq('student_id', sid),
       ]);
       const payments = paymentsRes.data || [];
