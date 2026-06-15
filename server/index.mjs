@@ -697,6 +697,29 @@ app.post('/api/sync-to-supabase', async (req, res) => {
       if (upsertErr) { results[table] = { count: 0, status: 'error', error: upsertErr.message }; }
       else { results[table] = { count: rows.length, status: 'ok' }; }
     }
+    // Pull parent_messages from Supabase into SQLite (two-way sync)
+    try {
+      const { data: cloudMessages } = await supabase.from('parent_messages').select('*').order('created_at', { ascending: false });
+      if (cloudMessages && cloudMessages.length > 0) {
+        const localRows = queryAll('SELECT id FROM parent_messages');
+        const localIds = new Set(localRows.map(function(r) { return r.id; }));
+        let pulled = 0;
+        for (const msg of cloudMessages.reverse()) {
+          if (!localIds.has(msg.id)) {
+            if (msg.deleted_at) continue;
+            const cols = Object.keys(msg).map(k => `"${k}"`).join(',');
+            const ph = Object.keys(msg).map(() => '?').join(',');
+            const vals = Object.values(msg).map(v => v === null || v === undefined ? null : typeof v === 'object' ? JSON.stringify(v) : v);
+            run(`INSERT OR IGNORE INTO parent_messages (${cols}) VALUES (${ph})`, vals);
+            pulled++;
+          }
+        }
+        results['parent_messages_synced'] = { count: cloudMessages.length, pulled, status: 'ok' };
+      }
+    } catch (pullErr) {
+      results['parent_messages_pull'] = { status: 'error', error: pullErr.message };
+    }
+
     res.json({ ok: true, results });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

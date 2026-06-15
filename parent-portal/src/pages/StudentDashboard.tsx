@@ -25,18 +25,23 @@ export default function StudentDashboard() {
     setError('');
     try {
       const sid = studentInfo.id;
-      const [studentRes, paymentsRes, examsRes, absenceRes, notesRes, booksRes, notifRes, totalRes] = await Promise.all([
-        supabase.from('students').select('*').eq('id', sid).maybeSingle(),
+      const studentRes = await supabase.from('students').select('*').eq('id', sid).maybeSingle();
+      const student = studentRes.data;
+      if (!student) { setError('الطالب غير موجود'); setLoading(false); return; }
+      const grade = student.grade || '';
+      const stage = grade.includes('ابتدائي') ? 'primary' : grade.includes('إعدادي') ? 'prep' : grade.includes('ثانوي') ? 'secondary' : '';
+      const targets = ['all'];
+      if (stage) targets.push(stage);
+      if (studentInfo.code) targets.push(studentInfo.code);
+      const [paymentsRes, examsRes, absenceRes, notesRes, booksRes, notifRes, totalRes] = await Promise.all([
         supabase.from('payments').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(20),
         supabase.from('exam_results').select('*').eq('student_id', sid).order('date', { ascending: false }),
         supabase.from('absence_records').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(30),
         supabase.from('attendance_notes').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(20),
         supabase.from('book_deliveries').select('*').eq('student_id', sid).order('delivery_date', { ascending: false }).limit(20),
-        supabase.from('notifications').select('*').or(`target.eq.all,target.eq.${studentInfo.code}`).order('created_at', { ascending: false }).limit(20),
+        supabase.from('notifications').select('*').in('target', targets).order('created_at', { ascending: false }).limit(20),
         supabase.from('payments').select('amount').eq('student_id', sid),
       ]);
-      const student = studentRes.data;
-      if (!student) { setError('الطالب غير موجود'); setLoading(false); return; }
       const payments = paymentsRes.data || [];
       const totalPaid = totalRes.data?.reduce((sum: number, p: any) => sum + (p.amount || 0), 0) || 0;
       const code = student.code;
