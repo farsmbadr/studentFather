@@ -5,6 +5,8 @@ import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
+const __require = createRequire(import.meta.url);
 import initSqlJs from 'sql.js/dist/sql-asm.js';
 import initSQL from './init-sql.js';
 import os from 'os';
@@ -683,7 +685,7 @@ app.post('/api/sync-to-supabase', async (req, res) => {
     const config = JSON.parse(fs.readFileSync(SUPABASE_CONFIG_PATH, 'utf8'));
     const { url, anonKey, serviceRoleKey } = config;
     const key = serviceRoleKey || anonKey;
-    const { createClient } = await import('@supabase/supabase-js');
+    const { createClient } = __require('@supabase/supabase-js');
     const supabase = createClient(url, key);
 
     const results = {};

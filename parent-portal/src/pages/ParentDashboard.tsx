@@ -37,7 +37,7 @@ export default function ParentDashboard() {
         supabase.from('absence_records').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(30),
         supabase.from('attendance_notes').select('*').eq('student_id', sid).order('date', { ascending: false }).limit(20),
         supabase.from('book_deliveries').select('*').eq('student_id', sid).order('delivery_date', { ascending: false }).limit(20),
-        supabase.from('notifications').select('*').order('created_at', { ascending: false }).limit(20),
+        supabase.from('notifications').select('*').or(`target.eq.all,target.eq.${studentInfo.code}`).order('created_at', { ascending: false }).limit(20),
         supabase.from('payments').select('amount').eq('student_id', sid),
       ]);
       const student = studentRes.data;
